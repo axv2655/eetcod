@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { Nav } from './components/Nav'
 import { ThemeToggle } from './components/ThemeToggle'
-import type { View } from './types'
+import { useStore, selectView } from './store'
 import { cn } from './utils/cn'
+import type { View } from './types'
 
 // Placeholder view components — will be replaced in later tasks
 function PlaceholderView({ name }: { name: string }) {
@@ -35,7 +35,8 @@ function ViewContent({ view }: { view: View }) {
 }
 
 export default function App() {
-  const [view, setView] = useState<View>('today')
+  const view = useStore(selectView)
+  const setView = useStore((s) => s.setView)
 
   return (
     <div
