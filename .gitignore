@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Environment variables — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# Vite cache
+.vite/
+
+# Editor
+.DS_Store
+.idea/
+*.swp
+*.swo
+
+# Coverage
+coverage/

@@ -1,0 +1,104 @@
+/* Tailwind v4 — uses @import directive, not @tailwind directives */
+@import "tailwindcss";
+
+/* ============================================================
+   Design tokens — spec §7
+   Defined in @theme so Tailwind v4 generates utility classes.
+   ============================================================ */
+@theme {
+  /* Color palette */
+  --color-ink:    #14171A;   /* primary dark surface / text on light */
+  --color-paper:  #EEF1F3;   /* cool off-white base */
+  --color-slate:  #5B6672;   /* secondary text / muted UI */
+  --color-line:   #D3D9DE;   /* hairlines, borders */
+
+  /* Mastery temperature scale — used ONLY for mastery encoding */
+  --color-cool:   #3E7CB1;   /* learning */
+  --color-mid:    #8FB8A8;   /* mid-mastery */
+  --color-warm:   #E0A458;   /* approaching mastered */
+  --color-hot:    #D9673B;   /* mastered */
+
+  /* Restrained accent for interactive elements */
+  --color-signal: #2F6F6A;
+
+  /* Typography — IBM Plex Mono + IBM Plex Sans (self-hosted) */
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --font-sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+
+  /* Type scale — spec §7: 12/14/16/20/28/40 */
+  --text-xs:   0.75rem;   /* 12px */
+  --text-sm:   0.875rem;  /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg:   1.25rem;   /* 20px */
+  --text-xl:   1.75rem;   /* 28px */
+  --text-2xl:  2.5rem;    /* 40px */
+}
+
+/* ============================================================
+   Base styles
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+/* Default dark-mode surfaces (dark is the default — spec §7) */
+html.dark body {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+/* Light mode overrides */
+html.light body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}
+
+/* Visible focus rings everywhere — spec §7 quality floor */
+:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
+}
+
+/* prefers-reduced-motion — spec §7 quality floor */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scrollbar styling (subtle, dark-mode) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate);
+  border-radius: 3px;
+  opacity: 0.4;
+}
