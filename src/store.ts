@@ -12,6 +12,7 @@ import { DEFAULT_SETTINGS } from './constants'
 import { seedProblems } from './seed/problems'
 import { seedCards } from './seed/cards'
 import { seedSnippets } from './seed/snippets'
+import { scheduleAfterAttempt, scheduleCard } from './scheduling'
 
 // ─── Persisted state shape ────────────────────────────────────────────────────
 
@@ -105,11 +106,18 @@ export const useStore = create<StoreState>()(
 
       addAttempt: (problemId, attempt) =>
         set((s) => ({
-          problems: s.problems.map((p) =>
-            p.id === problemId
-              ? { ...p, attempts: [...p.attempts, attempt] }
-              : p,
-          ),
+          problems: s.problems.map((p) => {
+            if (p.id !== problemId) return p
+            const today = attempt.date.slice(0, 10) // 'yyyy-MM-dd'
+            const { mastery, status, nextReview } = scheduleAfterAttempt(p, attempt.result, today)
+            return {
+              ...p,
+              attempts: [...p.attempts, attempt],
+              mastery,
+              status,
+              nextReview,
+            }
+          }),
           updatedAt: now(),
         })),
 
@@ -167,9 +175,17 @@ export const useStore = create<StoreState>()(
 
       rateCard: (cardId, rating) =>
         set((s) => ({
-          cards: s.cards.map((c) =>
-            c.id === cardId ? { ...c, lastRating: rating } : c,
-          ),
+          cards: s.cards.map((c) => {
+            if (c.id !== cardId) return c
+            const today = new Date().toISOString().slice(0, 10) // 'yyyy-MM-dd'
+            const { interval, nextReview } = scheduleCard(c, rating, today)
+            return {
+              ...c,
+              lastRating: rating,
+              interval,
+              nextReview,
+            }
+          }),
           updatedAt: now(),
         })),
 
