@@ -1,8 +1,11 @@
+import { useEffect } from 'react'
 import { Nav } from './components/Nav'
 import { ThemeToggle } from './components/ThemeToggle'
 import { useStore, selectView } from './store'
 import { cn } from './utils/cn'
 import type { View } from './types'
+import { Today } from './components/views/Today'
+import { ProblemSession } from './components/views/ProblemSession'
 
 // Placeholder view components — will be replaced in later tasks
 function PlaceholderView({ name }: { name: string }) {
@@ -15,10 +18,46 @@ function PlaceholderView({ name }: { name: string }) {
   )
 }
 
+// Guard component: handles the case where problem_session is active without a problemId
+function SessionGuard({ children }: { children: React.ReactNode }) {
+  const setView = useStore((s) => s.setView)
+  const sessionState = useStore((s) => s.sessionState)
+  const problemId = sessionState?.problemId as string | undefined
+
+  useEffect(() => {
+    if (!problemId) {
+      setView('today')
+    }
+  }, [problemId, setView])
+
+  if (!problemId) return null
+  return <>{children}</>
+}
+
 function ViewContent({ view }: { view: View }) {
+  const setView = useStore((s) => s.setView)
+  const sessionState = useStore((s) => s.sessionState)
+  const setSessionState = useStore((s) => s.setSessionState)
+
+  // ProblemSession is a special overlay — rendered when view === 'problem_session'
+  if (view === 'problem_session') {
+    const problemId = sessionState?.problemId as string | undefined
+    return (
+      <SessionGuard>
+        <ProblemSession
+          problemId={problemId!}
+          onComplete={() => {
+            setSessionState(null)
+            setView('today')
+          }}
+        />
+      </SessionGuard>
+    )
+  }
+
   switch (view) {
     case 'today':
-      return <PlaceholderView name="today" />
+      return <Today />
     case 'patterns':
       return <PlaceholderView name="patterns" />
     case 'concepts':
@@ -38,6 +77,14 @@ export default function App() {
   const view = useStore(selectView)
   const setView = useStore((s) => s.setView)
 
+  // When in problem_session, nav shows 'today' as active
+  const navView: View = view === 'problem_session' ? 'today' : view
+
+  const handleNavigate = (newView: View) => {
+    // If navigating away from problem session, return to today cleanly
+    setView(newView)
+  }
+
   return (
     <div
       className={cn(
@@ -47,7 +94,7 @@ export default function App() {
       )}
     >
       {/* Left rail nav */}
-      <Nav currentView={view} onNavigate={setView} />
+      <Nav currentView={navView} onNavigate={handleNavigate} />
 
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">

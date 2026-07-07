@@ -65,4 +65,5 @@ export interface Settings {
 }
 
 // View enum for screen switching (no router — per spec §2)
-export type View = 'today' | 'patterns' | 'concepts' | 'boilerplate' | 'progress' | 'settings';
+// 'problem_session' is a transient overlay on top of 'today' — not a nav destination
+export type View = 'today' | 'patterns' | 'concepts' | 'boilerplate' | 'progress' | 'settings' | 'problem_session';

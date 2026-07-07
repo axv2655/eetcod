@@ -150,7 +150,6 @@ export function computeDailyNewTarget(
 } {
   const totalProblems = problems.length
   const remainingNew = problems.filter((p) => p.status === 'not_started').length
-  const doneCount = totalProblems - remainingNew
 
   // Raw calendar days from today to deadline
   const rawDays = differenceInCalendarDays(
