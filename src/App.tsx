@@ -10,6 +10,7 @@ import { Patterns } from './components/views/Patterns'
 import { Concepts } from './components/views/Concepts'
 import { Boilerplate } from './components/views/Boilerplate'
 import { Settings } from './components/views/Settings'
+import { Progress } from './components/views/Progress'
 
 // Placeholder view components — will be replaced in later tasks
 function PlaceholderView({ name }: { name: string }) {
@@ -69,7 +70,7 @@ function ViewContent({ view }: { view: View }) {
     case 'boilerplate':
       return <Boilerplate />
     case 'progress':
-      return <PlaceholderView name="progress" />
+      return <Progress />
     case 'settings':
       return <Settings />
     default:
