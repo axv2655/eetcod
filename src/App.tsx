@@ -8,6 +8,8 @@ import { Today } from './components/views/Today'
 import { ProblemSession } from './components/views/ProblemSession'
 import { Patterns } from './components/views/Patterns'
 import { Concepts } from './components/views/Concepts'
+import { Boilerplate } from './components/views/Boilerplate'
+import { Settings } from './components/views/Settings'
 
 // Placeholder view components — will be replaced in later tasks
 function PlaceholderView({ name }: { name: string }) {
@@ -65,11 +67,11 @@ function ViewContent({ view }: { view: View }) {
     case 'concepts':
       return <Concepts />
     case 'boilerplate':
-      return <PlaceholderView name="boilerplate" />
+      return <Boilerplate />
     case 'progress':
       return <PlaceholderView name="progress" />
     case 'settings':
-      return <PlaceholderView name="settings" />
+      return <Settings />
     default:
       return <PlaceholderView name="unknown" />
   }
