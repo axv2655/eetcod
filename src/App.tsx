@@ -6,6 +6,8 @@ import { cn } from './utils/cn'
 import type { View } from './types'
 import { Today } from './components/views/Today'
 import { ProblemSession } from './components/views/ProblemSession'
+import { Patterns } from './components/views/Patterns'
+import { Concepts } from './components/views/Concepts'
 
 // Placeholder view components — will be replaced in later tasks
 function PlaceholderView({ name }: { name: string }) {
@@ -59,9 +61,9 @@ function ViewContent({ view }: { view: View }) {
     case 'today':
       return <Today />
     case 'patterns':
-      return <PlaceholderView name="patterns" />
+      return <Patterns />
     case 'concepts':
-      return <PlaceholderView name="concepts" />
+      return <Concepts />
     case 'boilerplate':
       return <PlaceholderView name="boilerplate" />
     case 'progress':
