@@ -16,6 +16,7 @@ import { PATTERN_LABELS, EMPTY_TODAY_TAGLINE, PATTERN_ORDER } from '../../consta
 import { cn } from '../../utils/cn'
 import { MasteryDots } from '../MasteryDots'
 import type { ConceptCard } from '../../types'
+import type { TransferTest } from '../../store'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,66 @@ function ConceptReview({ card, onDone }: ConceptReviewProps) {
   )
 }
 
+// ─── Transfer test banner ─────────────────────────────────────────────────────
+
+interface TransferTestBannerProps {
+  transferTest: TransferTest
+  problemTitle: string | undefined
+  onAccept: () => void
+  onDecline: () => void
+}
+
+function TransferTestBanner({ transferTest, problemTitle, onAccept, onDecline }: TransferTestBannerProps) {
+  return (
+    <div className={cn(
+      'flex flex-col gap-4 w-full max-w-xl',
+      'border border-warm/30 rounded-lg p-5',
+      'bg-warm/5',
+    )}>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-mono text-warm/70 uppercase tracking-widest">Transfer test</span>
+        <p className="font-sans text-base font-medium text-paper leading-snug">
+          You just mastered{' '}
+          <span className="italic">{transferTest.originProblemTitle}</span>.
+        </p>
+        <p className="text-sm font-sans text-slate leading-relaxed mt-1">
+          Same family. Does it still click without the label?
+        </p>
+        {problemTitle && (
+          <p className="text-xs font-mono text-slate/50 mt-1">
+            Next up: {problemTitle}
+          </p>
+        )}
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          onClick={onAccept}
+          className={cn(
+            'flex-1 py-2.5 rounded-lg text-sm font-sans font-medium',
+            'bg-warm/15 text-warm border border-warm/30',
+            'hover:bg-warm/25 hover:border-warm/50',
+            'transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+          )}
+        >
+          Try it
+        </button>
+        <button
+          onClick={onDecline}
+          className={cn(
+            'px-4 py-2.5 rounded-lg text-sm font-sans',
+            'border border-line/30 text-slate',
+            'hover:text-paper hover:border-line/60 transition-colors',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+          )}
+        >
+          Not now
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 interface EmptyStateProps {
@@ -185,6 +246,8 @@ export function Today() {
   const settings = useStore((s) => s.settings)
   const setView = useStore((s) => s.setView)
   const setSessionState = useStore((s) => s.setSessionState)
+  const transferTest = useStore((s) => s.transferTest)
+  const setTransferTest = useStore((s) => s.setTransferTest)
 
   const today = todayIso()
 
@@ -240,12 +303,8 @@ export function Today() {
     setDoneIds((prev) => new Set([...prev, cardId]))
   }
 
-  const handleStartProblem = (problemId: string) => {
-    setSessionState({ problemId })
-    setView('today') // view stays today but session overlay opens
-    // Signal the app to show the session via sessionState
-    // The App.tsx will watch sessionState.problemId to decide if ProblemSession is shown
-    // We use a special "session" pseudo-view handled in App.tsx
+  const handleStartProblem = (problemId: string, isTransferTest = false) => {
+    setSessionState({ problemId, isTransferTest })
     setView('problem_session' as Parameters<typeof setView>[0])
   }
 
@@ -255,9 +314,36 @@ export function Today() {
     setDoneIds((prev) => new Set([...prev, id]))
   }
 
+  // Transfer test: problem title for the banner
+  const transferTestProblem = transferTest
+    ? problems.find((p) => p.id === transferTest.problemId)
+    : null
+
+  // When a transfer test session completes, clear it
+  const handleTransferTestAccept = () => {
+    if (!transferTest) return
+    setTransferTest(null)
+    handleStartProblem(transferTest.problemId, true)
+  }
+
+  const handleTransferTestDecline = () => {
+    setTransferTest(null)
+  }
+
   if (remaining === 0) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full gap-6">
+        {/* Transfer test banner (shown even on empty queue) */}
+        {transferTest && (
+          <div className="flex flex-col items-center justify-start pt-8">
+            <TransferTestBanner
+              transferTest={transferTest}
+              problemTitle={transferTestProblem?.title}
+              onAccept={handleTransferTestAccept}
+              onDecline={handleTransferTestDecline}
+            />
+          </div>
+        )}
         {/* Pace indicator pill */}
         <PaceBar paceStatus={pacing.paceStatus} />
         <EmptyState
@@ -282,6 +368,18 @@ export function Today() {
         </span>
         <PaceBar paceStatus={pacing.paceStatus} />
       </div>
+
+      {/* Transfer test banner — shown above the queue when a transfer test is pending */}
+      {transferTest && (
+        <div className="flex flex-col items-center shrink-0">
+          <TransferTestBanner
+            transferTest={transferTest}
+            problemTitle={transferTestProblem?.title}
+            onAccept={handleTransferTestAccept}
+            onDecline={handleTransferTestDecline}
+          />
+        </div>
+      )}
 
       {/* Current item */}
       <div className="flex-1 flex flex-col items-center justify-center">
@@ -320,7 +418,7 @@ function PaceBar({ paceStatus }: { paceStatus: 'on_track' | 'ahead' | 'behind' }
 
 interface QueueCardProps {
   item: QueueItem
-  onStart: (problemId: string) => void
+  onStart: (problemId: string, isTransferTest?: boolean) => void
   onConceptDone: (cardId: string) => void
   onSkip: () => void
 }

@@ -47,10 +47,12 @@ function ViewContent({ view }: { view: View }) {
   // ProblemSession is a special overlay — rendered when view === 'problem_session'
   if (view === 'problem_session') {
     const problemId = sessionState?.problemId as string | undefined
+    const isTransferTest = (sessionState?.isTransferTest as boolean | undefined) ?? false
     return (
       <SessionGuard>
         <ProblemSession
           problemId={problemId!}
+          isTransferTest={isTransferTest}
           onComplete={() => {
             setSessionState(null)
             setView('today')

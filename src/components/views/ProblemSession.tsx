@@ -5,10 +5,14 @@
  *   attempt → hint → (confirm solution) → reimpl_gate? → log → notes → done
  *
  * Gates enforced by the component state; no step can be skipped.
+ *
+ * Task 8 additions:
+ *   - isTransferTest: hides pattern throughout, uses Transfer Test AI prompt
+ *   - AI prompt copy cards at appropriate steps (hint, log, notes)
  */
 import { useState, useRef, useCallback } from 'react'
 import { useStore } from '../../store'
-import { PATTERN_LABELS, PROMPT_HINT } from '../../constants'
+import { PATTERN_LABELS, PROMPT_HINT, PROMPT_SANITY_CHECK, PROMPT_CODE_REVIEW, PROMPT_TRANSFER_TEST } from '../../constants'
 import { cn } from '../../utils/cn'
 import { Timer } from '../Timer'
 import { CopyButton } from '../CopyButton'
@@ -24,9 +28,11 @@ type Step = 'attempt' | 'hint' | 'reimpl_gate' | 'log' | 'notes'
 interface ProblemSessionProps {
   problemId: string
   onComplete: () => void  // return to Today queue
+  /** When true the pattern is never revealed — used for transfer tests. */
+  isTransferTest?: boolean
 }
 
-export function ProblemSession({ problemId, onComplete }: ProblemSessionProps) {
+export function ProblemSession({ problemId, onComplete, isTransferTest = false }: ProblemSessionProps) {
   const problems = useStore((s) => s.problems)
   const settings = useStore((s) => s.settings)
   const addAttempt = useStore((s) => s.addAttempt)
@@ -124,6 +130,8 @@ export function ProblemSession({ problemId, onComplete }: ProblemSessionProps) {
 
   // Build the hint prompt with problem title filled in
   const hintPrompt = `Problem: "${problem.title}"\n\n${PROMPT_HINT}`
+  // Transfer test prompt with problem title filled in
+  const transferTestPrompt = PROMPT_TRANSFER_TEST.replace('[___]', problem.title)
 
   return (
     <div className="flex flex-col h-full max-w-2xl mx-auto">
@@ -144,9 +152,29 @@ export function ProblemSession({ problemId, onComplete }: ProblemSessionProps) {
           Today
         </button>
 
-        {/* Step indicator */}
-        <StepIndicator step={step} />
+        <div className="flex items-center gap-3">
+          {/* Transfer test badge */}
+          {isTransferTest && (
+            <span className="text-xs font-mono text-warm bg-warm/10 border border-warm/30 px-2 py-0.5 rounded">
+              transfer test
+            </span>
+          )}
+          {/* Step indicator */}
+          <StepIndicator step={step} />
+        </div>
       </div>
+
+      {/* Transfer test context banner */}
+      {isTransferTest && (
+        <div className={cn(
+          'shrink-0 mb-6 px-4 py-3 rounded-lg',
+          'border border-warm/20 bg-warm/5',
+        )}>
+          <p className="text-sm font-sans text-warm/90 leading-relaxed">
+            Same family. Does it still click without the label?
+          </p>
+        </div>
+      )}
 
       {/* Main step content */}
       <div className="flex-1 flex flex-col justify-center">
@@ -158,6 +186,7 @@ export function ProblemSession({ problemId, onComplete }: ProblemSessionProps) {
             timerDone={timerDone}
             onTimerComplete={handleTimerComplete}
             onStuck={handleStuck}
+            isTransferTest={isTransferTest}
           />
         )}
 
@@ -165,6 +194,7 @@ export function ProblemSession({ problemId, onComplete }: ProblemSessionProps) {
           <HintStep
             problem={problem}
             hintPrompt={hintPrompt}
+            isTransferTest={isTransferTest}
             onRevealSolution={handleRevealSolution}
             onProceedToLog={() => setStep('log')}
           />
@@ -181,6 +211,8 @@ export function ProblemSession({ problemId, onComplete }: ProblemSessionProps) {
         {step === 'log' && (
           <LogStep
             solutionRevealed={solutionRevealed}
+            isTransferTest={isTransferTest}
+            transferTestPrompt={transferTestPrompt}
             onLog={handleLog}
           />
         )}
@@ -194,6 +226,7 @@ export function ProblemSession({ problemId, onComplete }: ProblemSessionProps) {
             onInsight={setInsight}
             onGap={setGap}
             nudge={nudgeShown}
+            problemTitle={problem.title}
             onSave={handleSave}
           />
         )}
@@ -214,6 +247,79 @@ export function ProblemSession({ problemId, onComplete }: ProblemSessionProps) {
   )
 }
 
+// ─── AI Prompt Card ───────────────────────────────────────────────────────────
+// A subtle, collapsible card showing a copyable AI prompt template (§6).
+
+interface AiPromptCardProps {
+  label: string
+  description: string
+  promptText: string
+}
+
+function AiPromptCard({ label, description, promptText }: AiPromptCardProps) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className={cn(
+      'border border-line/20 rounded-lg overflow-hidden',
+      'bg-ink/30',
+    )}>
+      {/* Header — always visible, click to expand */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className={cn(
+          'w-full flex items-center justify-between gap-3 px-4 py-3',
+          'text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-signal',
+          'hover:bg-signal/5 transition-colors',
+        )}
+        aria-expanded={expanded}
+      >
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span className="text-xs font-mono text-slate/70 uppercase tracking-widest">AI prompt</span>
+          <span className="text-sm font-sans text-paper/80 font-medium">{label}</span>
+          {!expanded && (
+            <span className="text-xs font-sans text-slate/50 truncate">{description}</span>
+          )}
+        </div>
+        {/* Chevron */}
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={cn('shrink-0 text-slate/40 transition-transform', expanded && 'rotate-180')}
+          aria-hidden="true"
+        >
+          <polyline points="2 5 7 10 12 5" />
+        </svg>
+      </button>
+
+      {/* Expanded body */}
+      {expanded && (
+        <div className="px-4 pb-4 flex flex-col gap-3 border-t border-line/10">
+          <p className="text-xs font-sans text-slate/60 pt-3">{description}</p>
+          <div className={cn(
+            'border border-line/15 rounded-md p-3',
+            'bg-ink/60',
+          )}>
+            <p className="font-mono text-xs text-slate/70 leading-relaxed whitespace-pre-wrap break-words">
+              {promptText}
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <CopyButton text={promptText} label="Copy prompt" />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Step: Attempt ────────────────────────────────────────────────────────────
 
 interface AttemptStepProps {
@@ -223,9 +329,10 @@ interface AttemptStepProps {
   timerDone: boolean
   onTimerComplete: () => void
   onStuck: () => void
+  isTransferTest: boolean
 }
 
-function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete, onStuck }: AttemptStepProps) {
+function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete, onStuck, isTransferTest }: AttemptStepProps) {
   return (
     <div className="flex flex-col gap-8 items-center text-center">
       {/* Problem title — no pattern shown */}
@@ -248,7 +355,9 @@ function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete
 
       {/* Instruction */}
       <p className="text-sm font-sans text-slate max-w-md leading-relaxed">
-        Solve it in your editor or on LeetCode. The timer runs while you work. Hit "I'm stuck" when you want a hint.
+        {isTransferTest
+          ? 'No pattern label this time — see if the right approach surfaces on its own. Hit "I\'m stuck" when you want a hint.'
+          : 'Solve it in your editor or on LeetCode. The timer runs while you work. Hit "I\'m stuck" when you want a hint.'}
       </p>
 
       {/* Timer */}
@@ -273,47 +382,65 @@ function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete
 interface HintStepProps {
   problem: { title: string; pattern: string }
   hintPrompt: string
+  isTransferTest: boolean
   onRevealSolution: () => void
   onProceedToLog: () => void
 }
 
-function HintStep({ problem, hintPrompt, onRevealSolution, onProceedToLog }: HintStepProps) {
+function HintStep({ problem, hintPrompt, isTransferTest, onRevealSolution, onProceedToLog }: HintStepProps) {
   return (
     <div className="flex flex-col gap-8">
-      {/* Hint revealed */}
-      <div className="flex flex-col gap-3">
-        <span className="text-xs font-mono text-slate uppercase tracking-widest">Pattern hint</span>
-        <div className={cn(
-          'border border-signal/30 rounded-lg p-5',
-          'bg-signal/5',
-        )}>
-          <p className="font-sans text-lg font-medium text-paper">
-            {PATTERN_LABELS[problem.pattern] ?? problem.pattern}
-          </p>
-          <p className="text-sm font-sans text-slate mt-1">
-            This problem uses the {PATTERN_LABELS[problem.pattern] ?? problem.pattern} pattern.
-            Try again with this in mind.
-          </p>
+      {/* Pattern hint — hidden in transfer test mode */}
+      {!isTransferTest && (
+        <div className="flex flex-col gap-3">
+          <span className="text-xs font-mono text-slate uppercase tracking-widest">Pattern hint</span>
+          <div className={cn(
+            'border border-signal/30 rounded-lg p-5',
+            'bg-signal/5',
+          )}>
+            <p className="font-sans text-lg font-medium text-paper">
+              {PATTERN_LABELS[problem.pattern] ?? problem.pattern}
+            </p>
+            <p className="text-sm font-sans text-slate mt-1">
+              This problem uses the {PATTERN_LABELS[problem.pattern] ?? problem.pattern} pattern.
+              Try again with this in mind.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* AI hint prompt */}
-      <div className="flex flex-col gap-3">
-        <span className="text-xs font-mono text-slate uppercase tracking-widest">AI hint prompt</span>
+      {/* In transfer test mode, just give a nudge without revealing the pattern */}
+      {isTransferTest && (
         <div className={cn(
-          'border border-line/20 rounded-lg p-4',
-          'bg-ink/50',
+          'border border-warm/20 rounded-lg p-5',
+          'bg-warm/5',
         )}>
-          <p className="font-mono text-xs text-slate/80 leading-relaxed whitespace-pre-wrap break-words">
-            {hintPrompt}
+          <p className="font-sans text-base font-medium text-paper">Need a nudge?</p>
+          <p className="text-sm font-sans text-slate mt-1">
+            Think about the data constraints. What makes this problem tractable — and what pattern does that suggest?
           </p>
         </div>
-        <CopyButton text={hintPrompt} label="Copy prompt" />
-      </div>
+      )}
+
+      {/* AI hint prompt card */}
+      <AiPromptCard
+        label="Get a hint from AI"
+        description="Paste into your assistant — asks for pattern + one key question, not the answer"
+        promptText={hintPrompt}
+      />
+
+      {/* Sanity-check prompt card — shown after the hint step as the user tries again */}
+      <AiPromptCard
+        label="Sanity-check my approach"
+        description="When you have an idea — ask AI to poke holes before you code it"
+        promptText={PROMPT_SANITY_CHECK}
+      />
 
       {/* Encouragement */}
       <p className="text-sm font-sans text-slate italic text-center">
-        Try again with the pattern in mind — partial recognition counts.
+        {isTransferTest
+          ? 'Pattern recognition, not memorization — this is the real test.'
+          : 'Try again with the pattern in mind — partial recognition counts.'}
       </p>
 
       {/* Action buttons */}
@@ -415,10 +542,12 @@ function ReimplGate({ checked, onChange, onContinue }: ReimplGateProps) {
 
 interface LogStepProps {
   solutionRevealed: boolean
+  isTransferTest: boolean
+  transferTestPrompt: string
   onLog: (result: AttemptResult) => void
 }
 
-function LogStep({ solutionRevealed, onLog }: LogStepProps) {
+function LogStep({ solutionRevealed, isTransferTest, transferTestPrompt, onLog }: LogStepProps) {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
@@ -432,7 +561,7 @@ function LogStep({ solutionRevealed, onLog }: LogStepProps) {
         {/* Cold — disabled if solution was revealed */}
         <ResultButton
           label="Cold"
-          description="Solved without hints or solutions"
+          description={isTransferTest ? 'Pattern clicked without any hint' : 'Solved without hints or solutions'}
           disabled={solutionRevealed}
           disabledReason={solutionRevealed ? 'Not available — solution was revealed' : undefined}
           colorClass="text-mid border-mid/40 hover:bg-mid/15"
@@ -442,7 +571,7 @@ function LogStep({ solutionRevealed, onLog }: LogStepProps) {
         {/* Hint */}
         <ResultButton
           label="Hint"
-          description="Needed the pattern name or a nudge"
+          description={isTransferTest ? 'Needed a nudge before it clicked' : 'Needed the pattern name or a nudge'}
           colorClass="text-warm border-warm/40 hover:bg-warm/15"
           onClick={() => onLog('hint')}
         />
@@ -450,11 +579,20 @@ function LogStep({ solutionRevealed, onLog }: LogStepProps) {
         {/* Solution */}
         <ResultButton
           label="Solution"
-          description="Read the solution or re-implemented it"
+          description={isTransferTest ? 'Needed to read the full solution' : 'Read the solution or re-implemented it'}
           colorClass="text-cool border-cool/40 hover:bg-cool/15"
           onClick={() => onLog('solution')}
         />
       </div>
+
+      {/* Transfer test AI prompt card — available during the log step */}
+      {isTransferTest && (
+        <AiPromptCard
+          label="Generate another transfer test"
+          description="Ask AI for a fresh unlabeled problem in the same family"
+          promptText={transferTestPrompt}
+        />
+      )}
     </div>
   )
 }
@@ -503,10 +641,14 @@ interface NotesStepProps {
   onInsight: (v: string) => void
   onGap: (v: string) => void
   nudge: boolean
+  problemTitle: string
   onSave: () => void
 }
 
-function NotesStep({ trigger, insight, gap, onTrigger, onInsight, onGap, nudge, onSave }: NotesStepProps) {
+function NotesStep({ trigger, insight, gap, onTrigger, onInsight, onGap, nudge, problemTitle, onSave }: NotesStepProps) {
+  // Code review prompt with problem title context
+  const codeReviewPrompt = `Problem: "${problemTitle}"\n\n${PROMPT_CODE_REVIEW}`
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-1">
@@ -536,6 +678,13 @@ function NotesStep({ trigger, insight, gap, onTrigger, onInsight, onGap, nudge, 
           onChange={onGap}
         />
       </div>
+
+      {/* Code review AI prompt — shown after solving, before saving notes */}
+      <AiPromptCard
+        label="Code review"
+        description="Paste your working solution — get complexity analysis and a clean-up if needed"
+        promptText={codeReviewPrompt}
+      />
 
       {/* Nudge message */}
       {nudge && (

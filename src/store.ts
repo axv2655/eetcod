@@ -26,10 +26,20 @@ interface PersistedState {
 
 // ─── Transient state shape ────────────────────────────────────────────────────
 
+/** Pending transfer test after a mastery event (~1 in 3 chance). */
+export interface TransferTest {
+  /** The problem to surface as an unlabeled transfer test. */
+  problemId: string
+  /** The problem that was just mastered, which triggered this test. */
+  originProblemTitle: string
+}
+
 interface TransientState {
   view: View
   // sessionState is defined fully in Task 4; kept as an open shape here
   sessionState: Record<string, unknown> | null
+  /** Non-null when a transfer test is pending. Cleared after accept/decline. */
+  transferTest: TransferTest | null
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -64,6 +74,9 @@ interface Actions {
 
   // Session (transient — Task 4 will expand)
   setSessionState: (state: Record<string, unknown> | null) => void
+
+  // Transfer test (transient — Task 8)
+  setTransferTest: (tt: TransferTest | null) => void
 
   // Bulk operations
   resetAll: () => void
@@ -101,15 +114,36 @@ export const useStore = create<StoreState>()(
       // ── Initial transient state ─────────────────────────────────────────
       view: 'today' as View,
       sessionState: null,
+      transferTest: null,
 
       // ── Problem actions ─────────────────────────────────────────────────
 
       addAttempt: (problemId, attempt) =>
-        set((s) => ({
-          problems: s.problems.map((p) => {
+        set((s) => {
+          let pendingTransferTest: TransferTest | null = null
+
+          const updatedProblems = s.problems.map((p) => {
             if (p.id !== problemId) return p
             const today = attempt.date.slice(0, 10) // 'yyyy-MM-dd'
             const { mastery, status, nextReview } = scheduleAfterAttempt(p, attempt.result, today)
+
+            // Transfer test: after a problem reaches 'mastered', ~1 in 3 chance
+            // to surface a different problem in the same pattern as a check.
+            if (status === 'mastered' && p.status !== 'mastered' && Math.random() < 0.33) {
+              // Pick a different problem in the same pattern; prefer mastered/reviewing
+              const samePattern = s.problems.filter(
+                (other) => other.id !== problemId && other.pattern === p.pattern,
+              )
+              const preferred = samePattern.filter(
+                (other) => other.status === 'mastered' || other.status === 'reviewing',
+              )
+              const pool = preferred.length > 0 ? preferred : samePattern
+              if (pool.length > 0) {
+                const pick = pool[Math.floor(Math.random() * pool.length)]
+                pendingTransferTest = { problemId: pick.id, originProblemTitle: p.title }
+              }
+            }
+
             return {
               ...p,
               attempts: [...p.attempts, attempt],
@@ -117,9 +151,14 @@ export const useStore = create<StoreState>()(
               status,
               nextReview,
             }
-          }),
-          updatedAt: now(),
-        })),
+          })
+
+          return {
+            problems: updatedProblems,
+            transferTest: pendingTransferTest !== null ? pendingTransferTest : s.transferTest,
+            updatedAt: now(),
+          }
+        }),
 
       updateNotes: (problemId, notes) =>
         set((s) => ({
@@ -227,6 +266,10 @@ export const useStore = create<StoreState>()(
 
       setSessionState: (sessionState) => set({ sessionState }),
 
+      // ── Transfer test (transient — Task 8) ──────────────────────────────
+
+      setTransferTest: (transferTest) => set({ transferTest }),
+
       // ── Bulk operations ─────────────────────────────────────────────────
 
       resetAll: () =>
@@ -277,3 +320,4 @@ export const selectSnippets = (s: StoreState) => s.snippets
 export const selectSettings = (s: StoreState) => s.settings
 export const selectView = (s: StoreState) => s.view
 export const selectUpdatedAt = (s: StoreState) => s.updatedAt
+export const selectTransferTest = (s: StoreState) => s.transferTest
