@@ -6,6 +6,9 @@
  * Expanded: that pattern's problems with status badge, MasteryDots,
  * last attempt date, 3-line notes, inline notes editing.
  * Click problem title → jump to ProblemSession.
+ *
+ * Task 9 addition (§8): full problem CRUD — edit title/url/pattern/order,
+ * add new problem, remove with confirm.
  */
 import { useState, useMemo } from 'react'
 import { useStore } from '../../store'
@@ -14,6 +17,7 @@ import { cn } from '../../utils/cn'
 import { TemperatureBar } from '../TemperatureBar'
 import type { MasteryCounts } from '../TemperatureBar'
 import { MasteryDots } from '../MasteryDots'
+import { ConfirmDialog } from '../ConfirmDialog'
 import type { Pattern, Problem, ProblemStatus } from '../../types'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -37,6 +41,262 @@ const STATUS_COLORS: Record<ProblemStatus, string> = {
   learning:    'text-cool border-cool/40',
   reviewing:   'text-mid border-mid/40',
   mastered:    'text-hot border-hot/40',
+}
+
+function uid(): string {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
+// ─── Problem edit form ────────────────────────────────────────────────────────
+
+interface ProblemEditFormProps {
+  problem: Problem
+  onSave: (updates: Partial<Problem>) => void
+  onCancel: () => void
+}
+
+function ProblemEditForm({ problem, onSave, onCancel }: ProblemEditFormProps) {
+  const [title, setTitle] = useState(problem.title)
+  const [url, setUrl] = useState(problem.url)
+  const [pattern, setPattern] = useState<Pattern>(problem.pattern)
+  const [order, setOrder] = useState(String(problem.order))
+
+  const canSave = title.trim() && url.trim()
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!canSave) return
+    const orderNum = parseInt(order, 10)
+    onSave({
+      title: title.trim(),
+      url: url.trim(),
+      pattern,
+      order: isNaN(orderNum) ? problem.order : orderNum,
+    })
+  }
+
+  const inputClass = cn(
+    'w-full bg-ink border border-line/30 rounded px-3 py-1.5',
+    'font-sans text-sm text-paper',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+    'placeholder:text-slate/30',
+  )
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={cn(
+        'flex flex-col gap-3 p-4 rounded-lg mt-2',
+        'border border-signal/30 bg-signal/5',
+      )}
+    >
+      <p className="font-mono text-xs text-signal font-medium">Edit problem</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <label className="font-mono text-xs text-slate/60">Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Problem title"
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <label className="font-mono text-xs text-slate/60">LeetCode URL</label>
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://leetcode.com/problems/..."
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="font-mono text-xs text-slate/60">Pattern</label>
+          <select
+            value={pattern}
+            onChange={(e) => setPattern(e.target.value as Pattern)}
+            className={cn(inputClass, 'bg-ink')}
+          >
+            {PATTERN_ORDER.map((p) => (
+              <option key={p} value={p}>{PATTERN_LABELS[p] ?? p}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="font-mono text-xs text-slate/60">Order within pattern</label>
+          <input
+            type="number"
+            value={order}
+            onChange={(e) => setOrder(e.target.value)}
+            min={1}
+            className={cn(inputClass, 'w-full')}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className={cn(
+            'px-3 py-1.5 rounded text-xs font-sans',
+            'border border-line/30 text-slate',
+            'hover:text-paper hover:border-line/60 transition-colors',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+          )}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!canSave}
+          className={cn(
+            'px-3 py-1.5 rounded text-xs font-sans font-medium',
+            'bg-signal text-paper border border-signal/50',
+            'hover:bg-signal/80 transition-colors',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+            'disabled:opacity-40 disabled:cursor-not-allowed',
+          )}
+        >
+          Save
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// ─── Add problem form ─────────────────────────────────────────────────────────
+
+interface AddProblemFormProps {
+  defaultPattern: Pattern
+  defaultOrder: number
+  onAdd: (problem: Problem) => void
+  onCancel: () => void
+}
+
+function AddProblemForm({ defaultPattern, defaultOrder, onAdd, onCancel }: AddProblemFormProps) {
+  const [title, setTitle] = useState('')
+  const [url, setUrl] = useState('')
+  const [pattern, setPattern] = useState<Pattern>(defaultPattern)
+  const [order, setOrder] = useState(String(defaultOrder))
+
+  const canSubmit = title.trim() && url.trim()
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!canSubmit) return
+    const orderNum = parseInt(order, 10)
+    const slug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    onAdd({
+      id: slug + '-' + uid().slice(0, 6),
+      title: title.trim(),
+      url: url.trim(),
+      pattern,
+      order: isNaN(orderNum) ? defaultOrder : orderNum,
+      status: 'not_started',
+      mastery: 0,
+      nextReview: null,
+      attempts: [],
+      notes: { trigger: '', insight: '', gap: '' },
+    })
+    setTitle('')
+    setUrl('')
+  }
+
+  const inputClass = cn(
+    'w-full bg-ink border border-line/30 rounded px-3 py-1.5',
+    'font-sans text-sm text-paper',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+    'placeholder:text-slate/30',
+  )
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={cn(
+        'flex flex-col gap-3 p-4 rounded-lg',
+        'border border-signal/30 bg-signal/5',
+      )}
+    >
+      <p className="font-mono text-xs text-signal font-medium">Add new problem</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <label className="font-mono text-xs text-slate/60">Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Two Sum"
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <label className="font-mono text-xs text-slate/60">LeetCode URL</label>
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://leetcode.com/problems/two-sum/"
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="font-mono text-xs text-slate/60">Pattern</label>
+          <select
+            value={pattern}
+            onChange={(e) => setPattern(e.target.value as Pattern)}
+            className={cn(inputClass, 'bg-ink')}
+          >
+            {PATTERN_ORDER.map((p) => (
+              <option key={p} value={p}>{PATTERN_LABELS[p] ?? p}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="font-mono text-xs text-slate/60">Order within pattern</label>
+          <input
+            type="number"
+            value={order}
+            onChange={(e) => setOrder(e.target.value)}
+            min={1}
+            className={cn(inputClass, 'w-full')}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className={cn(
+            'px-3 py-1.5 rounded text-xs font-sans',
+            'border border-line/30 text-slate',
+            'hover:text-paper hover:border-line/60 transition-colors',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+          )}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className={cn(
+            'px-3 py-1.5 rounded text-xs font-sans font-medium',
+            'bg-signal text-paper border border-signal/50',
+            'hover:bg-signal/80 transition-colors',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+            'disabled:opacity-40 disabled:cursor-not-allowed',
+          )}
+        >
+          Add problem
+        </button>
+      </div>
+    </form>
+  )
 }
 
 // ─── Notes editor ─────────────────────────────────────────────────────────────
@@ -105,10 +365,13 @@ function NotesEditor({ problemId, notes }: NotesEditorProps) {
 interface ProblemRowProps {
   problem: Problem
   onStartSession: (problemId: string) => void
+  onEditProblem: (problem: Problem) => void
+  onDeleteProblem: (problemId: string) => void
 }
 
-function ProblemRow({ problem, onStartSession }: ProblemRowProps) {
+function ProblemRow({ problem, onStartSession, onEditProblem, onDeleteProblem }: ProblemRowProps) {
   const [editingNotes, setEditingNotes] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const lastAttemptDate =
     problem.attempts.length > 0
@@ -118,65 +381,106 @@ function ProblemRow({ problem, onStartSession }: ProblemRowProps) {
   const hasNotes = problem.notes.trigger || problem.notes.insight || problem.notes.gap
 
   return (
-    <div className={cn(
-      'flex flex-col gap-2 py-3 px-4',
-      'border-b border-line/10 last:border-b-0',
-    )}>
-      {/* Main row */}
-      <div className="flex items-center gap-3">
-        {/* Problem title — click to start session */}
-        <button
-          onClick={() => onStartSession(problem.id)}
-          className={cn(
-            'font-sans text-sm text-paper/90 text-left flex-1 min-w-0',
-            'hover:text-signal transition-colors truncate',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded',
-          )}
-          title={`Start session for ${problem.title}`}
-        >
-          {problem.title}
-        </button>
+    <>
+      <div className={cn(
+        'flex flex-col gap-2 py-3 px-4',
+        'border-b border-line/10 last:border-b-0',
+      )}>
+        {/* Main row */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Problem title — click to start session */}
+          <button
+            onClick={() => onStartSession(problem.id)}
+            className={cn(
+              'font-sans text-sm text-paper/90 text-left flex-1 min-w-0',
+              'hover:text-signal transition-colors truncate',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded',
+            )}
+            title={`Start session for ${problem.title}`}
+          >
+            {problem.title}
+          </button>
 
-        {/* Status badge */}
-        <span className={cn(
-          'text-xs font-mono px-1.5 py-0.5 rounded border shrink-0',
-          STATUS_COLORS[problem.status],
-        )}>
-          {STATUS_LABELS[problem.status]}
-        </span>
+          {/* Status badge — hidden on very narrow mobile */}
+          <span className={cn(
+            'hidden sm:inline text-xs font-mono px-1.5 py-0.5 rounded border shrink-0',
+            STATUS_COLORS[problem.status],
+          )}>
+            {STATUS_LABELS[problem.status]}
+          </span>
 
-        {/* Mastery dots */}
-        <MasteryDots mastery={problem.mastery} size="sm" />
+          {/* Mastery dots */}
+          <MasteryDots mastery={problem.mastery} size="sm" />
 
-        {/* Last attempt date */}
-        <span className="font-mono text-xs text-slate/50 tabular-nums shrink-0 w-14 text-right">
-          {formatDate(lastAttemptDate)}
-        </span>
+          {/* Last attempt date — hidden on narrow mobile */}
+          <span className="hidden sm:block font-mono text-xs text-slate/50 tabular-nums shrink-0 w-14 text-right">
+            {formatDate(lastAttemptDate)}
+          </span>
 
-        {/* Notes toggle */}
-        <button
-          onClick={() => setEditingNotes((v) => !v)}
-          className={cn(
-            'text-xs font-mono shrink-0 transition-colors',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1',
-            editingNotes
-              ? 'text-signal'
-              : hasNotes
-              ? 'text-slate/60 hover:text-slate'
-              : 'text-line/40 hover:text-slate/40',
-          )}
-          title={editingNotes ? 'Hide notes' : 'Edit notes'}
-          aria-expanded={editingNotes}
-        >
-          {editingNotes ? '▲' : '▼'}
-        </button>
+          {/* Edit problem */}
+          <button
+            onClick={() => onEditProblem(problem)}
+            className={cn(
+              'font-mono text-xs text-slate/40 hover:text-slate transition-colors shrink-0',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1',
+            )}
+            title="Edit problem"
+            aria-label={`Edit ${problem.title}`}
+          >
+            edit
+          </button>
+
+          {/* Delete problem */}
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className={cn(
+              'font-mono text-xs text-slate/30 hover:text-hot transition-colors shrink-0',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1',
+            )}
+            title="Remove problem"
+            aria-label={`Remove ${problem.title}`}
+          >
+            ×
+          </button>
+
+          {/* Notes toggle */}
+          <button
+            onClick={() => setEditingNotes((v) => !v)}
+            className={cn(
+              'font-mono text-xs shrink-0 transition-colors',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1',
+              editingNotes
+                ? 'text-signal'
+                : hasNotes
+                ? 'text-slate/60 hover:text-slate'
+                : 'text-line/40 hover:text-slate/40',
+            )}
+            title={editingNotes ? 'Hide notes' : 'Edit notes'}
+            aria-expanded={editingNotes}
+          >
+            {editingNotes ? '▲' : '▼'}
+          </button>
+        </div>
+
+        {/* Notes panel */}
+        {editingNotes && (
+          <NotesEditor problemId={problem.id} notes={problem.notes} />
+        )}
       </div>
 
-      {/* Notes panel */}
-      {editingNotes && (
-        <NotesEditor problemId={problem.id} notes={problem.notes} />
-      )}
-    </div>
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Remove problem"
+        message={`Remove "${problem.title}" from your list? This will delete all attempt history and notes for this problem. It cannot be undone.`}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => {
+          onDeleteProblem(problem.id)
+          setConfirmDelete(false)
+        }}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    </>
   )
 }
 
@@ -189,6 +493,9 @@ interface PatternRowProps {
   expanded: boolean
   onToggle: () => void
   onStartSession: (problemId: string) => void
+  onEditProblem: (problem: Problem) => void
+  onDeleteProblem: (problemId: string) => void
+  onAddProblem: (problem: Problem) => void
 }
 
 function PatternRow({
@@ -198,20 +505,28 @@ function PatternRow({
   expanded,
   onToggle,
   onStartSession,
+  onEditProblem,
+  onDeleteProblem,
+  onAddProblem,
 }: PatternRowProps) {
   const label = PATTERN_LABELS[pattern] ?? pattern
   const total = counts.not_started + counts.learning + counts.reviewing + counts.mastered
+  const [showAddForm, setShowAddForm] = useState(false)
+
+  const handleAdd = (problem: Problem) => {
+    onAddProblem(problem)
+    setShowAddForm(false)
+  }
 
   return (
     <div className={cn(
       'border border-line/20 rounded-lg overflow-hidden',
-      'transition-colors',
     )}>
       {/* Header — click to expand */}
       <button
         onClick={onToggle}
         className={cn(
-          'w-full flex items-center gap-4 px-4 py-3',
+          'w-full flex items-center gap-3 sm:gap-4 px-4 py-3',
           'hover:bg-paper/5 transition-colors',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-inset',
           expanded && 'bg-paper/5',
@@ -224,8 +539,8 @@ function PatternRow({
           {label}
         </span>
 
-        {/* Counts — mastered / reviewing / learning / not started */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Counts — mastered / reviewing / learning / not started (hide on mobile) */}
+        <div className="hidden sm:flex items-center gap-3 shrink-0">
           <span className="font-mono text-xs text-hot tabular-nums" title="Mastered">
             {counts.mastered}
           </span>
@@ -244,19 +559,19 @@ function PatternRow({
         </div>
 
         {/* Temperature bar */}
-        <div className="w-28 shrink-0">
+        <div className="w-20 sm:w-28 shrink-0">
           <TemperatureBar counts={counts} showTotal={false} />
         </div>
 
         {/* Total count */}
-        <span className="font-mono text-xs text-slate/50 tabular-nums w-6 text-right shrink-0">
+        <span className="font-mono text-xs text-slate/50 tabular-nums w-5 sm:w-6 text-right shrink-0">
           {total}
         </span>
 
         {/* Chevron */}
         <span
           className={cn(
-            'font-mono text-xs text-slate/40 shrink-0 transition-transform duration-200',
+            'font-mono text-xs text-slate/40 shrink-0 motion-safe:transition-transform motion-safe:duration-200',
             expanded && 'rotate-180',
           )}
           aria-hidden="true"
@@ -268,18 +583,53 @@ function PatternRow({
       {/* Expanded problem list */}
       {expanded && (
         <div className="border-t border-line/15">
-          {problems.length === 0 ? (
-            <p className="px-4 py-3 text-xs font-sans text-slate/40 italic">
-              No problems in this pattern.
-            </p>
+          {problems.length === 0 && !showAddForm ? (
+            <div className="px-4 py-4 flex flex-col gap-3">
+              <p className="text-xs font-sans text-slate/50">
+                No problems in this pattern yet.
+              </p>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className={cn(
+                  'self-start font-mono text-xs text-signal/70 hover:text-signal transition-colors',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1',
+                )}
+              >
+                + add problem
+              </button>
+            </div>
           ) : (
-            problems.map((problem) => (
-              <ProblemRow
-                key={problem.id}
-                problem={problem}
-                onStartSession={onStartSession}
-              />
-            ))
+            <>
+              {problems.map((problem) => (
+                <ProblemRow
+                  key={problem.id}
+                  problem={problem}
+                  onStartSession={onStartSession}
+                  onEditProblem={onEditProblem}
+                  onDeleteProblem={onDeleteProblem}
+                />
+              ))}
+              <div className="px-4 py-2 border-t border-line/10">
+                {showAddForm ? (
+                  <AddProblemForm
+                    defaultPattern={pattern}
+                    defaultOrder={problems.length + 1}
+                    onAdd={handleAdd}
+                    onCancel={() => setShowAddForm(false)}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className={cn(
+                      'font-mono text-xs text-slate/40 hover:text-signal transition-colors',
+                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1 py-1',
+                    )}
+                  >
+                    + add problem
+                  </button>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -293,8 +643,13 @@ export function Patterns() {
   const problems = useStore((s) => s.problems)
   const setView = useStore((s) => s.setView)
   const setSessionState = useStore((s) => s.setSessionState)
+  const updateProblem = useStore((s) => s.updateProblem)
+  const addProblem = useStore((s) => s.addProblem)
+  const removeProblem = useStore((s) => s.removeProblem)
 
   const [expandedPatterns, setExpandedPatterns] = useState<Set<Pattern>>(new Set())
+  // Problem being edited in the inline form
+  const [editingProblem, setEditingProblem] = useState<Problem | null>(null)
 
   // Group problems by pattern, sorted by order within each pattern
   const problemsByPattern = useMemo(() => {
@@ -354,6 +709,12 @@ export function Patterns() {
     setView('problem_session')
   }
 
+  const handleEditSave = (updates: Partial<Problem>) => {
+    if (!editingProblem) return
+    updateProblem(editingProblem.id, updates)
+    setEditingProblem(null)
+  }
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
       {/* Header */}
@@ -366,9 +727,9 @@ export function Patterns() {
 
       {/* Overall summary bar */}
       <div className="flex flex-col gap-2 p-4 border border-line/20 rounded-lg">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-1 gap-x-3">
           <span className="font-sans text-xs text-slate">Overall progress</span>
-          <div className="flex items-center gap-3 font-mono text-xs">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs">
             <span className="text-hot tabular-nums" title="Mastered">{totals.mastered} mastered</span>
             <span className="text-mid tabular-nums" title="Reviewing">{totals.reviewing} reviewing</span>
             <span className="text-cool tabular-nums" title="Learning">{totals.learning} learning</span>
@@ -389,15 +750,29 @@ export function Patterns() {
             mastered: 0,
           }
           return (
-            <PatternRow
-              key={p}
-              pattern={p}
-              problems={problemsByPattern.get(p) ?? []}
-              counts={counts}
-              expanded={expandedPatterns.has(p)}
-              onToggle={() => handleToggle(p)}
-              onStartSession={handleStartSession}
-            />
+            <div key={p}>
+              <PatternRow
+                pattern={p}
+                problems={problemsByPattern.get(p) ?? []}
+                counts={counts}
+                expanded={expandedPatterns.has(p)}
+                onToggle={() => handleToggle(p)}
+                onStartSession={handleStartSession}
+                onEditProblem={setEditingProblem}
+                onDeleteProblem={removeProblem}
+                onAddProblem={addProblem}
+              />
+              {/* Inline edit form — shown below the pattern row being edited */}
+              {editingProblem && editingProblem.pattern === p && (
+                <div className="mt-1 px-2">
+                  <ProblemEditForm
+                    problem={editingProblem}
+                    onSave={handleEditSave}
+                    onCancel={() => setEditingProblem(null)}
+                  />
+                </div>
+              )}
+            </div>
           )
         })}
       </div>

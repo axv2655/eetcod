@@ -61,8 +61,8 @@ function FieldRow({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex items-start gap-4">
-      <div className="flex flex-col gap-0.5 w-44 shrink-0 pt-1">
+    <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+      <div className="flex flex-col gap-0.5 sm:w-44 sm:shrink-0 sm:pt-1">
         <span className="font-sans text-sm text-paper/80">{label}</span>
         {hint && <span className="font-sans text-xs text-slate/60">{hint}</span>}
       </div>
@@ -205,7 +205,7 @@ export function Settings() {
                 min={30}
                 max={3600}
                 step={30}
-                className={cn(inputClass, 'w-32')}
+                className={cn(inputClass, 'w-full sm:w-32')}
                 aria-label="Timer length in seconds"
               />
               <span className="font-sans text-xs text-slate shrink-0">seconds</span>
@@ -220,7 +220,7 @@ export function Settings() {
               min={1}
               max={7}
               step={1}
-              className={cn(inputClass, 'w-20')}
+              className={cn(inputClass, 'w-full sm:w-20')}
               aria-label="Study days per week (1–7)"
             />
           </FieldRow>
@@ -231,7 +231,7 @@ export function Settings() {
               value={settings.language}
               onChange={handleLanguageChange}
               placeholder={DEFAULT_SETTINGS.language}
-              className={cn(inputClass, 'w-40')}
+              className={cn(inputClass, 'w-full sm:w-40')}
               aria-label="Primary language"
             />
           </FieldRow>
@@ -241,7 +241,7 @@ export function Settings() {
               type="date"
               value={settings.deadline}
               onChange={handleDeadlineChange}
-              className={cn(inputClass, 'w-44')}
+              className={cn(inputClass, 'w-full sm:w-44')}
               aria-label="Study deadline"
             />
           </FieldRow>

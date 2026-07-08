@@ -82,9 +82,54 @@ const NAV_ITEMS: NavItem[] = [
 interface NavProps {
   currentView: View
   onNavigate: (view: View) => void
+  /** When true, renders as a bottom tab bar (mobile layout) */
+  mobile?: boolean
 }
 
-export function Nav({ currentView, onNavigate }: NavProps) {
+export function Nav({ currentView, onNavigate, mobile = false }: NavProps) {
+  // ── Mobile bottom tab bar ──────────────────────────────────────────────
+  if (mobile) {
+    return (
+      <nav
+        aria-label="Main navigation"
+        className={cn(
+          'fixed bottom-0 left-0 right-0 z-40',
+          'flex flex-row items-center justify-around',
+          'bg-ink border-t border-line/20',
+          'h-16 px-2',
+          // Safe area inset for iOS
+          'pb-[env(safe-area-inset-bottom)]',
+        )}
+      >
+        {NAV_ITEMS.map(item => {
+          const isActive = item.view === currentView
+          return (
+            <button
+              key={item.view}
+              onClick={() => onNavigate(item.view)}
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={item.label}
+              className={cn(
+                'flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg min-w-0',
+                'transition-colors duration-100',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+                isActive
+                  ? 'text-signal'
+                  : 'text-slate/60 hover:text-paper',
+              )}
+            >
+              <span className="shrink-0">{item.icon}</span>
+              <span className="text-[10px] font-sans font-medium truncate max-w-[56px]">
+                {item.label}
+              </span>
+            </button>
+          )
+        })}
+      </nav>
+    )
+  }
+
+  // ── Desktop left rail ──────────────────────────────────────────────────
   return (
     <nav
       aria-label="Main navigation"
@@ -92,7 +137,7 @@ export function Nav({ currentView, onNavigate }: NavProps) {
         'flex flex-col w-16 shrink-0',
         'bg-ink border-r border-line/20',
         'py-4 gap-1',
-        // On wider screens show labels; on narrow screens icon-only
+        // On wider screens show labels
         'md:w-48',
       )}
     >

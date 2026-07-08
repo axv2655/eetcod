@@ -98,10 +98,14 @@ export default function App() {
         'flex h-screen overflow-hidden',
         'bg-ink text-paper',
         'font-sans',
+        // On mobile: stack content above bottom nav
+        'flex-col md:flex-row',
       )}
     >
-      {/* Left rail nav */}
-      <Nav currentView={navView} onNavigate={handleNavigate} />
+      {/* Left rail nav — hidden on mobile (we show bottom bar instead) */}
+      <div className="hidden md:flex">
+        <Nav currentView={navView} onNavigate={handleNavigate} />
+      </div>
 
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -117,9 +121,14 @@ export default function App() {
         </header>
 
         {/* View content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
           <ViewContent view={view} />
         </main>
+      </div>
+
+      {/* Bottom tab bar — mobile only */}
+      <div className="md:hidden">
+        <Nav currentView={navView} onNavigate={handleNavigate} mobile />
       </div>
     </div>
   )

@@ -542,11 +542,6 @@ function QueueCard({ item, onStart, onConceptDone, onSkip }: QueueCardProps) {
           Skip
         </button>
       </div>
-
-      {/* Subtle tagline */}
-      <p className="text-xs font-sans text-slate/40 italic text-center">
-        {EMPTY_TODAY_TAGLINE}
-      </p>
     </div>
   )
 }

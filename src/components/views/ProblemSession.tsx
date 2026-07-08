@@ -134,9 +134,9 @@ export function ProblemSession({ problemId, onComplete, isTransferTest = false }
   const transferTestPrompt = PROMPT_TRANSFER_TEST.replace('[___]', problem.title)
 
   return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto">
+    <div className="flex flex-col h-full max-w-2xl mx-auto w-full">
       {/* Top bar — problem title + back */}
-      <div className="flex items-center justify-between shrink-0 mb-8">
+      <div className="flex items-center justify-between shrink-0 mb-6 sm:mb-8">
         <button
           onClick={onComplete}
           className={cn(
@@ -334,10 +334,10 @@ interface AttemptStepProps {
 
 function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete, onStuck, isTransferTest }: AttemptStepProps) {
   return (
-    <div className="flex flex-col gap-8 items-center text-center">
+    <div className="flex flex-col gap-6 sm:gap-8 items-center text-center">
       {/* Problem title — no pattern shown */}
       <div className="flex flex-col gap-2">
-        <h1 className="font-sans text-2xl font-semibold text-paper">
+        <h1 className="font-sans text-xl sm:text-2xl font-semibold text-paper">
           {problem.title}
         </h1>
         <a
@@ -354,7 +354,7 @@ function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete
       </div>
 
       {/* Instruction */}
-      <p className="text-sm font-sans text-slate max-w-md leading-relaxed">
+      <p className="text-sm font-sans text-slate max-w-md leading-relaxed px-2">
         {isTransferTest
           ? 'No pattern label this time — see if the right approach surfaces on its own. Hit "I\'m stuck" when you want a hint.'
           : 'Solve it in your editor or on LeetCode. The timer runs while you work. Hit "I\'m stuck" when you want a hint.'}

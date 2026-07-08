@@ -147,9 +147,9 @@ function AllCaughtUp({ onBrowse }: { onBrowse: () => void }) {
     <div className="flex flex-col items-center justify-center gap-6 h-64">
       <div className="flex flex-col items-center gap-2">
         <span className="font-mono text-2xl text-line/20" aria-hidden="true">✓</span>
-        <h2 className="font-sans text-lg font-semibold text-paper">All caught up</h2>
+        <h2 className="font-sans text-lg font-semibold text-paper">All caught up on concepts</h2>
         <p className="font-sans text-sm text-slate text-center max-w-xs">
-          No concept cards are due right now. Check back later or browse your cards.
+          No cards are due right now. Browse your deck or add a new card to keep building pattern recognition.
         </p>
       </div>
       <button
@@ -605,10 +605,21 @@ function BrowseMode() {
       })}
 
       {cards.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-3 py-16">
-          <p className="font-sans text-sm text-slate text-center">
-            No concept cards yet. Add some to start your flashcard deck.
+        <div className="flex flex-col items-center justify-center gap-4 py-16">
+          <p className="font-sans text-sm text-slate text-center max-w-xs">
+            No concept cards yet. Add a card for any pattern you want to drill on recognition — what signals it, what the key move is.
           </p>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-sans',
+              'bg-signal text-paper border border-signal/50',
+              'hover:bg-signal/80 transition-colors',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+            )}
+          >
+            Add first card
+          </button>
         </div>
       )}
     </div>

@@ -94,7 +94,7 @@ function Cell({ problem, onHover }: CellProps) {
       type="button"
       className={cn(
         'w-4 h-4 rounded-sm',
-        'transition-[background-color,opacity] duration-200',
+        'motion-safe:transition-[background-color,opacity] motion-safe:duration-200',
         'focus-visible:ring-1 focus-visible:ring-signal focus-visible:ring-offset-1 focus-visible:ring-offset-ink',
         'focus-visible:outline-none',
         isNotStarted ? 'border border-solid' : '',
@@ -151,10 +151,10 @@ export function WarmingGrid({ problems }: WarmingGridProps) {
   const total = problems.length
 
   return (
-    <div className="flex flex-col gap-5" ref={containerRef}>
-      {/* Legend row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-5">
+    <div className="flex flex-col gap-4" ref={containerRef}>
+      {/* Legend row — wraps on mobile */}
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
           <LegendItem color="transparent" border label="not started" />
           <LegendItem color="#3E7CB1" label="learning" />
           <LegendItem color="#8FB8A8" label="reviewing" />
@@ -166,16 +166,18 @@ export function WarmingGrid({ problems }: WarmingGridProps) {
         </span>
       </div>
 
-      {/* Grid — pattern groups */}
-      <div className="flex flex-col gap-3">
-        {grouped.map(({ pattern, label, problems: patternProblems }) => (
-          <PatternRow
-            key={pattern}
-            label={label}
-            problems={patternProblems}
-            onHover={handleHover}
-          />
-        ))}
+      {/* Grid — horizontally scrollable on mobile */}
+      <div className="overflow-x-auto -mx-1 px-1">
+        <div className="flex flex-col gap-2.5 min-w-max">
+          {grouped.map(({ pattern, label, problems: patternProblems }) => (
+            <PatternRow
+              key={pattern}
+              label={label}
+              problems={patternProblems}
+              onHover={handleHover}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Floating tooltip */}
@@ -212,7 +214,7 @@ function PatternRow({ label, problems, onHover }: PatternRowProps) {
       </span>
 
       {/* Cell strip */}
-      <div className="flex items-center gap-0.5 flex-wrap">
+      <div className="flex items-center gap-0.5">
         {problems.map((p) => (
           <Cell key={p.id} problem={p} onHover={onHover} />
         ))}

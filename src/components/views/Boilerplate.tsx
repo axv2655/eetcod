@@ -509,9 +509,9 @@ export function Boilerplate() {
       </div>
 
       {snippets.length === 0 && (
-        <div className="flex flex-col items-center gap-3 py-16">
-          <p className="font-sans text-sm text-slate text-center">
-            No snippets yet. Expand a pattern group and add your first one.
+        <div className="flex flex-col items-center gap-4 py-16">
+          <p className="font-sans text-sm text-slate text-center max-w-xs">
+            No snippets yet. Expand a pattern group and add the template you always forget — BFS, binary search, union-find. Copy it when you need it, not from memory.
           </p>
         </div>
       )}

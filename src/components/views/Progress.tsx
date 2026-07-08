@@ -195,7 +195,7 @@ export function Progress() {
   const daysLeft = differenceInCalendarDays(parseISO(settings.deadline), parseISO(today))
 
   return (
-    <div className="flex flex-col gap-10 px-6 py-8 max-w-4xl mx-auto">
+    <div className="flex flex-col gap-8 sm:gap-10 max-w-4xl mx-auto w-full">
 
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1">
