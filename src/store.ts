@@ -34,12 +34,25 @@ export interface TransferTest {
   originProblemTitle: string
 }
 
+/** Sync status — tracks background cloud sync state. */
+export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline'
+
+/** Authenticated user info (transient — not persisted). */
+export interface AuthUser {
+  id: string
+  email: string
+}
+
 interface TransientState {
   view: View
   // sessionState is defined fully in Task 4; kept as an open shape here
   sessionState: Record<string, unknown> | null
   /** Non-null when a transfer test is pending. Cleared after accept/decline. */
   transferTest: TransferTest | null
+  // ── Auth & sync (Task 10) — transient, not persisted ──────────────────
+  user: AuthUser | null
+  syncStatus: SyncStatus
+  lastSyncedAt: string | null
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -78,6 +91,11 @@ interface Actions {
   // Transfer test (transient — Task 8)
   setTransferTest: (tt: TransferTest | null) => void
 
+  // Auth & sync (transient — Task 10)
+  setUser: (user: AuthUser | null) => void
+  setSyncStatus: (status: SyncStatus) => void
+  setLastSyncedAt: (ts: string | null) => void
+
   // Bulk operations
   resetAll: () => void
   replaceAll: (state: Partial<PersistedState>) => void
@@ -115,6 +133,9 @@ export const useStore = create<StoreState>()(
       view: 'today' as View,
       sessionState: null,
       transferTest: null,
+      user: null,
+      syncStatus: 'idle' as SyncStatus,
+      lastSyncedAt: null,
 
       // ── Problem actions ─────────────────────────────────────────────────
 
@@ -270,6 +291,12 @@ export const useStore = create<StoreState>()(
 
       setTransferTest: (transferTest) => set({ transferTest }),
 
+      // ── Auth & sync (transient — Task 10) ───────────────────────────────
+
+      setUser: (user) => set({ user }),
+      setSyncStatus: (syncStatus) => set({ syncStatus }),
+      setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
+
       // ── Bulk operations ─────────────────────────────────────────────────
 
       resetAll: () =>
@@ -321,3 +348,6 @@ export const selectSettings = (s: StoreState) => s.settings
 export const selectView = (s: StoreState) => s.view
 export const selectUpdatedAt = (s: StoreState) => s.updatedAt
 export const selectTransferTest = (s: StoreState) => s.transferTest
+export const selectUser = (s: StoreState) => s.user
+export const selectSyncStatus = (s: StoreState) => s.syncStatus
+export const selectLastSyncedAt = (s: StoreState) => s.lastSyncedAt

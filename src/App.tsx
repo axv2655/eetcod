@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Nav } from './components/Nav'
 import { ThemeToggle } from './components/ThemeToggle'
 import { useStore, selectView } from './store'
@@ -11,6 +11,9 @@ import { Concepts } from './components/views/Concepts'
 import { Boilerplate } from './components/views/Boilerplate'
 import { Settings } from './components/views/Settings'
 import { Progress } from './components/views/Progress'
+import { Login } from './components/views/Login'
+import { supabase, isSupabaseConfigured } from './lib/supabase'
+import { initSync, teardownSync } from './sync'
 
 // Placeholder view components — will be replaced in later tasks
 function PlaceholderView({ name }: { name: string }) {
@@ -83,6 +86,65 @@ function ViewContent({ view }: { view: View }) {
 export default function App() {
   const view = useStore(selectView)
   const setView = useStore((s) => s.setView)
+  const setUser = useStore((s) => s.setUser)
+  const setSyncStatus = useStore((s) => s.setSyncStatus)
+
+  // Auth state: null = loading, false = no session, true = has session
+  // Only relevant when Supabase is configured.
+  const [authReady, setAuthReady] = useState(!isSupabaseConfigured)
+
+  useEffect(() => {
+    if (!supabase) return // Supabase not configured — skip auth entirely
+
+    // Get current session on mount (handles page reload with persisted session)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({ id: session.user.id, email: session.user.email ?? '' })
+        // Don't await — init sync in background, never block render
+        initSync(session.user.id).catch(console.error)
+      } else if (!navigator.onLine) {
+        // Offline with no live session — run from local cache
+        setSyncStatus('offline')
+      }
+      setAuthReady(true)
+    })
+
+    // Subscribe to auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          setUser({ id: session.user.id, email: session.user.email ?? '' })
+          initSync(session.user.id).catch(console.error)
+        } else {
+          setUser(null)
+          teardownSync()
+          setSyncStatus('idle')
+        }
+        setAuthReady(true)
+      },
+    )
+
+    return () => {
+      subscription.unsubscribe()
+      teardownSync()
+    }
+  }, [setUser, setSyncStatus])
+
+  const user = useStore((s) => s.user)
+
+  // Show nothing until auth state is determined (avoids flash of login screen)
+  if (!authReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-ink">
+        <span className="font-mono text-sm text-slate animate-pulse">loading…</span>
+      </div>
+    )
+  }
+
+  // If Supabase is configured and there's no user → show login
+  if (isSupabaseConfigured && !user) {
+    return <Login />
+  }
 
   // When in problem_session, nav shows 'today' as active
   const navView: View = view === 'problem_session' ? 'today' : view

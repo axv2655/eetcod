@@ -19,6 +19,8 @@ import { cn } from '../../utils/cn'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { exportState } from '../../utils/exportImport'
 import { importState } from '../../utils/exportImport'
+import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { syncNow, teardownSync } from '../../sync'
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 
@@ -80,6 +82,11 @@ export function Settings() {
   const settings = useStore((s) => s.settings)
   const updateSettings = useStore((s) => s.updateSettings)
   const resetAll = useStore((s) => s.resetAll)
+  const user = useStore((s) => s.user)
+  const syncStatus = useStore((s) => s.syncStatus)
+  const lastSyncedAt = useStore((s) => s.lastSyncedAt)
+  const setUser = useStore((s) => s.setUser)
+  const setSyncStatus = useStore((s) => s.setSyncStatus)
 
   // Import feedback state
   const [importStatus, setImportStatus] = useState<
@@ -165,6 +172,43 @@ export function Settings() {
 
   const handleResetCancel = () => setResetStep(0)
 
+  // ── Account / sync handlers ──────────────────────────────────────────
+
+  const handleSyncNow = async () => {
+    if (!user) return
+    setSyncStatus('syncing')
+    await syncNow(user.id)
+  }
+
+  const handleSignOut = async () => {
+    if (!supabase) return
+    teardownSync()
+    // Clear local cache by resetting to seed, then sign out
+    resetAll()
+    setUser(null)
+    setSyncStatus('idle')
+    await supabase.auth.signOut()
+  }
+
+  // Format last synced timestamp for display
+  const lastSyncedDisplay = lastSyncedAt
+    ? new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null
+
+  const syncStatusLabel: Record<typeof syncStatus, string> = {
+    idle: 'Up to date',
+    syncing: 'Syncing…',
+    error: 'Sync error',
+    offline: 'Offline',
+  }
+
+  const syncStatusColor: Record<typeof syncStatus, string> = {
+    idle: 'text-mid',
+    syncing: 'text-slate animate-pulse',
+    error: 'text-hot',
+    offline: 'text-warm',
+  }
+
   // ── Derived display values ───────────────────────────────────────────
 
   const timerMinutes = Math.floor(settings.timerSec / 60)
@@ -246,6 +290,65 @@ export function Settings() {
             />
           </FieldRow>
         </Section>
+
+        {/* ── Account (only shown when Supabase is configured) ── */}
+        {isSupabaseConfigured && user && (
+          <Section
+            title="Account"
+            description="Cloud sync keeps your data in step across devices."
+          >
+            {/* Signed-in email */}
+            <FieldRow label="Signed in as">
+              <span className="font-mono text-sm text-paper break-all">{user.email}</span>
+            </FieldRow>
+
+            {/* Sync status + last synced */}
+            <FieldRow label="Sync status">
+              <div className="flex flex-col gap-1">
+                <span className={cn('font-sans text-sm', syncStatusColor[syncStatus])}>
+                  {syncStatusLabel[syncStatus]}
+                </span>
+                {lastSyncedDisplay && (
+                  <span className="font-sans text-xs text-slate/60">
+                    Last synced at {lastSyncedDisplay}
+                  </span>
+                )}
+              </div>
+            </FieldRow>
+
+            {/* Sync now */}
+            <FieldRow label="Sync now" hint="Pull latest from cloud, then push any local changes">
+              <button
+                onClick={handleSyncNow}
+                disabled={syncStatus === 'syncing'}
+                className={cn(
+                  'self-start px-4 py-2 rounded text-sm font-sans font-medium',
+                  'bg-signal text-paper border border-signal/50',
+                  'hover:bg-signal/80 transition-colors',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+                  'disabled:opacity-40 disabled:cursor-not-allowed',
+                )}
+              >
+                {syncStatus === 'syncing' ? 'Syncing…' : 'Sync now'}
+              </button>
+            </FieldRow>
+
+            {/* Sign out */}
+            <FieldRow label="Sign out" hint="Clears this device's local cache — your data is safe in the cloud">
+              <button
+                onClick={handleSignOut}
+                className={cn(
+                  'self-start px-4 py-2 rounded text-sm font-sans',
+                  'border border-line/30 text-slate',
+                  'hover:text-paper hover:border-line/60 transition-colors',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+                )}
+              >
+                Sign out
+              </button>
+            </FieldRow>
+          </Section>
+        )}
 
         {/* ── Data management ── */}
         <Section
