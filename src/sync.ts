@@ -51,6 +51,7 @@ interface SnapshotState {
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null
 let _unsubscribe: (() => void) | null = null
 let _onlineListener: (() => void) | null = null
+let _offlineListener: (() => void) | null = null
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -213,10 +214,10 @@ export async function initSync(userId: string): Promise<void> {
   window.addEventListener('online', _onlineListener)
 
   // Also update status to offline if connection drops
-  const offlineListener = () => {
+  _offlineListener = () => {
     useStore.getState().setSyncStatus('offline')
   }
-  window.addEventListener('offline', offlineListener)
+  window.addEventListener('offline', _offlineListener)
 }
 
 /**
@@ -234,5 +235,9 @@ export function teardownSync(): void {
   if (_onlineListener) {
     window.removeEventListener('online', _onlineListener)
     _onlineListener = null
+  }
+  if (_offlineListener) {
+    window.removeEventListener('offline', _offlineListener)
+    _offlineListener = null
   }
 }
