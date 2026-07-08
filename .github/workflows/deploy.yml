@@ -1,0 +1,59 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are the two publishable
+      # Supabase keys — safe in the public bundle because Row-Level Security
+      # (RLS) on the app_state table protects all data.
+      #
+      # To set them:
+      #   GitHub repo → Settings → Secrets and variables → Actions → New secret
+      #   Add: VITE_SUPABASE_URL  (e.g. https://xxxx.supabase.co)
+      #        VITE_SUPABASE_ANON_KEY  (your project's anon/public key)
+      #
+      # Supabase URL allow-list — IMPORTANT:
+      #   In Supabase → Auth → URL Configuration → Redirect Allow List, add:
+      #     https://<your-github-username>.github.io/eetcod/
+      #     http://localhost:5173   (for local dev)
+      #   If you use a custom domain, also add:
+      #     https://<your-custom-domain>/
+      #   Without this, magic-link and GitHub OAuth redirects will fail in production.
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

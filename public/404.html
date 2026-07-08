@@ -1,13 +1,15 @@
-<!doctype html>
-<html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Warmup — NeetCode 150 Practice Tracker</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Warmup</title>
+  <script>
+    // GitHub Pages SPA redirect:
+    // When GitHub Pages serves 404.html for unknown paths, we redirect back
+    // to the app root so the Zustand view-enum router can handle the state.
+    sessionStorage.setItem('redirect', window.location.href);
+    window.location.replace(window.location.origin + '/eetcod/');
+  </script>
+</head>
+<body></body>
 </html>

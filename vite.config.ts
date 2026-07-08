@@ -3,11 +3,12 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // Base path config:
-// - Use '/<repo>/' when hosting at https://<user>.github.io/<repo>/
-// - Use '/' when hosting at a user/org page or custom domain root
-// GitHub Pages deploy: set base to '/warmup/' or '/' depending on your repo setup
+// - GitHub Pages repo page (https://<user>.github.io/<repo>/): use '/<repo>/'
+// - GitHub Pages user/org page (https://<user>.github.io/) or custom domain: use '/'
+//
+// Change to '/' if you set up a custom domain (add public/CNAME and update DNS).
 export default defineConfig({
-  base: '/',
+  base: '/eetcod/', // Change to '/' for custom domain
   plugins: [
     tailwindcss(),
     react(),
