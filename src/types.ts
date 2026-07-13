@@ -22,6 +22,13 @@ export interface Attempt {
 export type Mastery = 0 | 1 | 2 | 3; // 0 = learning ... 3 = about to retire
 export type ProblemStatus = 'not_started' | 'learning' | 'reviewing' | 'mastered';
 
+export interface Solution {
+  code: string;            // the user's code
+  timeComplexity: string;  // e.g. 'O(n)'
+  spaceComplexity: string; // e.g. 'O(1)'
+  notes: string;           // markdown-formatted notes
+}
+
 export interface Problem {
   id: string;            // stable slug, e.g. 'two-sum'
   title: string;         // 'Two Sum'
@@ -37,6 +44,7 @@ export interface Problem {
     insight: string;     // the one non-obvious move
     gap: string;         // the exact thing that tripped me up
   };
+  solution: Solution | null; // user's saved solution + complexity
 }
 
 export interface ConceptCard {

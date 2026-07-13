@@ -7,6 +7,7 @@ import type {
   Settings,
   View,
   Attempt,
+  Solution,
 } from './types'
 import { DEFAULT_SETTINGS } from './constants'
 import { seedProblems } from './seed/problems'
@@ -65,6 +66,7 @@ interface Actions {
     notes: Partial<Problem['notes']>,
   ) => void
   updateProblem: (problemId: string, updates: Partial<Problem>) => void
+  updateSolution: (problemId: string, solution: Solution) => void
   addProblem: (problem: Problem) => void
   removeProblem: (problemId: string) => void
 
@@ -195,6 +197,14 @@ export const useStore = create<StoreState>()(
         set((s) => ({
           problems: s.problems.map((p) =>
             p.id === problemId ? { ...p, ...updates } : p,
+          ),
+          updatedAt: now(),
+        })),
+
+      updateSolution: (problemId, solution) =>
+        set((s) => ({
+          problems: s.problems.map((p) =>
+            p.id === problemId ? { ...p, solution } : p,
           ),
           updatedAt: now(),
         })),

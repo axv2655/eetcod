@@ -17,6 +17,7 @@ function makeProblem(
     nextReview: null,
     attempts: [],
     notes: { trigger: '', insight: '', gap: '' },
+    solution: null,
   }
 }
 

@@ -249,6 +249,15 @@ export function buildTodayQueue(
   // 3. New problems in strict NeetCode order
   const { dailyNewTarget } = computeDailyNewTarget(problems, settings, today)
 
+  // Subtract new problems already done today — problems whose first attempt is today
+  const newDoneToday = problems.filter(
+    (p) =>
+      p.status !== 'not_started' &&
+      p.attempts.length > 0 &&
+      p.attempts[0].date.slice(0, 10) === today,
+  ).length
+  const newToShow = Math.max(0, dailyNewTarget - newDoneToday)
+
   // Build a pattern → order map for sorting
   const patternRank = new Map(PATTERN_ORDER.map((p, i) => [p, i]))
 
@@ -260,7 +269,7 @@ export function buildTodayQueue(
       if (pa !== pb) return pa - pb
       return a.order - b.order
     })
-    .slice(0, dailyNewTarget)
+    .slice(0, newToShow)
     .map((p) => ({ type: 'new' as const, problem: p }))
 
   // 4. Interleave reviews and new items (alternate: review, new, review, new...)

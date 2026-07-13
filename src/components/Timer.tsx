@@ -16,6 +16,8 @@ interface TimerProps {
   durationSec: number
   onComplete: () => void
   onStuck: () => void
+  /** Fires when user clicks "Done" — solved before time ran out. */
+  onDone: () => void
   /** Optional ref to read elapsed seconds from the parent. Updated on every tick. */
   elapsedRef?: React.MutableRefObject<number>
   /** When true, the timer is paused (does not count down). */
@@ -28,7 +30,7 @@ function fmtTime(sec: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-export function Timer({ durationSec, onComplete, onStuck, elapsedRef, paused = false }: TimerProps) {
+export function Timer({ durationSec, onComplete, onStuck, onDone, elapsedRef, paused = false }: TimerProps) {
   const [remaining, setRemaining] = useState(durationSec)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const startedRef = useRef(Date.now())
@@ -79,6 +81,14 @@ export function Timer({ durationSec, onComplete, onStuck, elapsedRef, paused = f
     onStuck()
   }
 
+  const handleDone = () => {
+    stopInterval()
+    if (elapsedRef) {
+      elapsedRef.current = durationSec - remaining
+    }
+    onDone()
+  }
+
   const fraction = durationSec > 0 ? remaining / durationSec : 0
   const pct = Math.max(0, Math.min(100, fraction * 100))
 
@@ -118,6 +128,19 @@ export function Timer({ durationSec, onComplete, onStuck, elapsedRef, paused = f
           style={{ width: `${pct}%` }}
         />
       </div>
+
+      {/* Done button */}
+      <button
+        onClick={handleDone}
+        className={cn(
+          'px-6 py-2 rounded text-sm font-sans font-medium',
+          'bg-signal text-paper border border-signal/50',
+          'hover:bg-signal/80 transition-colors',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+        )}
+      >
+        Done
+      </button>
 
       {/* I'm stuck button */}
       <button

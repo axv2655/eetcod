@@ -8,7 +8,7 @@
  *
  * Toggle between modes via a header tab strip.
  */
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useStore } from '../../store'
 import { PATTERN_LABELS, PATTERN_ORDER } from '../../constants'
 import { isDue } from '../../scheduling'
@@ -39,17 +39,17 @@ function CardReview({ card, total, remaining, onRate }: CardReviewProps) {
   const [revealed, setRevealed] = useState(false)
 
   // Reset reveal state whenever card changes
-  const [revealedCardId, setRevealedCardId] = useState<string | null>(null)
-  const isCurrentRevealed = revealedCardId === card.id
+  const prevIdRef = useRef(card.id)
+  if (prevIdRef.current !== card.id) {
+    prevIdRef.current = card.id
+    setRevealed(false)
+  }
 
   const handleReveal = () => {
-    setRevealedCardId(card.id)
     setRevealed(true)
   }
 
   const handleRate = (rating: NonNullable<ConceptCard['lastRating']>) => {
-    setRevealedCardId(null)
-    setRevealed(false)
     onRate(rating)
   }
 
@@ -74,7 +74,7 @@ function CardReview({ card, total, remaining, onRate }: CardReviewProps) {
       </div>
 
       {/* Answer or reveal button */}
-      {isCurrentRevealed || revealed ? (
+      {revealed ? (
         <div className={cn(
           'border border-signal/20 rounded-lg p-5',
           'bg-signal/5',
@@ -96,7 +96,7 @@ function CardReview({ card, total, remaining, onRate }: CardReviewProps) {
       )}
 
       {/* Rating buttons — only after reveal */}
-      {(isCurrentRevealed || revealed) && (
+      {(revealed) && (
         <div className="flex flex-col gap-2">
           <p className="text-xs font-sans text-slate">How did it go?</p>
           <div className="flex gap-3">

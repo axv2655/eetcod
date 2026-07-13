@@ -37,6 +37,7 @@ export function ProblemSession({ problemId, onComplete, isTransferTest = false }
   const settings = useStore((s) => s.settings)
   const addAttempt = useStore((s) => s.addAttempt)
   const updateNotes = useStore((s) => s.updateNotes)
+  const updateSolution = useStore((s) => s.updateSolution)
 
   const problem = problems.find((p) => p.id === problemId)
 
@@ -58,6 +59,13 @@ export function ProblemSession({ problemId, onComplete, isTransferTest = false }
   const [insight, setInsight] = useState(existingNotes?.insight ?? '')
   const [gap, setGap] = useState(existingNotes?.gap ?? '')
 
+  // Solution state — pre-filled from existing solution if any
+  const existingSolution = problem?.solution
+  const [solutionCode, setSolutionCode] = useState(existingSolution?.code ?? '')
+  const [timeComplexity, setTimeComplexity] = useState(existingSolution?.timeComplexity ?? '')
+  const [spaceComplexity, setSpaceComplexity] = useState(existingSolution?.spaceComplexity ?? '')
+  const [solutionNotes, setSolutionNotes] = useState(existingSolution?.notes ?? '')
+
   // ── Handlers ────────────────────────────────────────────────────────────
 
   const handleTimerComplete = useCallback(() => {
@@ -68,6 +76,11 @@ export function ProblemSession({ problemId, onComplete, isTransferTest = false }
   const handleStuck = useCallback(() => {
     setTimerDone(true)
     setStep('hint')
+  }, [])
+
+  const handleDone = useCallback(() => {
+    setTimerDone(true)
+    setStep('log')
   }, [])
 
   const handleRevealSolution = () => {
@@ -108,6 +121,15 @@ export function ProblemSession({ problemId, onComplete, isTransferTest = false }
         trigger: trigger.trim(),
         insight: insight.trim(),
         gap: gap.trim(),
+      })
+    }
+
+    if (solutionCode.trim() || timeComplexity.trim() || spaceComplexity.trim() || solutionNotes.trim()) {
+      updateSolution(problemId, {
+        code: solutionCode,
+        timeComplexity: timeComplexity.trim(),
+        spaceComplexity: spaceComplexity.trim(),
+        notes: solutionNotes,
       })
     }
 
@@ -186,6 +208,7 @@ export function ProblemSession({ problemId, onComplete, isTransferTest = false }
             timerDone={timerDone}
             onTimerComplete={handleTimerComplete}
             onStuck={handleStuck}
+            onDone={handleDone}
             isTransferTest={isTransferTest}
           />
         )}
@@ -225,6 +248,14 @@ export function ProblemSession({ problemId, onComplete, isTransferTest = false }
             onTrigger={setTrigger}
             onInsight={setInsight}
             onGap={setGap}
+            solutionCode={solutionCode}
+            timeComplexity={timeComplexity}
+            spaceComplexity={spaceComplexity}
+            solutionNotes={solutionNotes}
+            onSolutionCode={setSolutionCode}
+            onTimeComplexity={setTimeComplexity}
+            onSpaceComplexity={setSpaceComplexity}
+            onSolutionNotes={setSolutionNotes}
             nudge={nudgeShown}
             problemTitle={problem.title}
             onSave={handleSave}
@@ -329,10 +360,11 @@ interface AttemptStepProps {
   timerDone: boolean
   onTimerComplete: () => void
   onStuck: () => void
+  onDone: () => void
   isTransferTest: boolean
 }
 
-function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete, onStuck, isTransferTest }: AttemptStepProps) {
+function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete, onStuck, onDone, isTransferTest }: AttemptStepProps) {
   return (
     <div className="flex flex-col gap-6 sm:gap-8 items-center text-center">
       {/* Problem title — no pattern shown */}
@@ -367,6 +399,7 @@ function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete
             durationSec={timerSec}
             onComplete={onTimerComplete}
             onStuck={onStuck}
+            onDone={onDone}
             elapsedRef={elapsedRef}
           />
         </div>
@@ -640,12 +673,26 @@ interface NotesStepProps {
   onTrigger: (v: string) => void
   onInsight: (v: string) => void
   onGap: (v: string) => void
+  solutionCode: string
+  timeComplexity: string
+  spaceComplexity: string
+  solutionNotes: string
+  onSolutionCode: (v: string) => void
+  onTimeComplexity: (v: string) => void
+  onSpaceComplexity: (v: string) => void
+  onSolutionNotes: (v: string) => void
   nudge: boolean
   problemTitle: string
   onSave: () => void
 }
 
-function NotesStep({ trigger, insight, gap, onTrigger, onInsight, onGap, nudge, problemTitle, onSave }: NotesStepProps) {
+function NotesStep({
+  trigger, insight, gap, onTrigger, onInsight, onGap,
+  solutionCode, timeComplexity, spaceComplexity, solutionNotes,
+  onSolutionCode, onTimeComplexity, onSpaceComplexity, onSolutionNotes,
+  nudge, problemTitle, onSave,
+}: NotesStepProps) {
+  const [showSolution, setShowSolution] = useState(false)
   // Code review prompt with problem title context
   const codeReviewPrompt = `Problem: "${problemTitle}"\n\n${PROMPT_CODE_REVIEW}`
 
@@ -677,6 +724,119 @@ function NotesStep({ trigger, insight, gap, onTrigger, onInsight, onGap, nudge, 
           value={gap}
           onChange={onGap}
         />
+      </div>
+
+      {/* Solution section — collapsible */}
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => setShowSolution((v) => !v)}
+          className={cn(
+            'flex items-center gap-2 text-left',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded',
+          )}
+          aria-expanded={showSolution}
+        >
+          <span
+            className={cn(
+              'font-mono text-xs text-slate/40 shrink-0 transition-transform',
+              showSolution && 'rotate-90',
+            )}
+            aria-hidden="true"
+          >
+            ▶
+          </span>
+          <span className="font-sans text-sm font-medium text-paper/80">
+            My solution
+          </span>
+          {(solutionCode || timeComplexity || spaceComplexity) && !showSolution && (
+            <span className="font-mono text-xs text-signal/60">saved</span>
+          )}
+        </button>
+
+        {showSolution && (
+          <div className="flex flex-col gap-4 pl-5">
+            {/* Code textarea */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-mono text-slate uppercase tracking-widest">
+                Code
+              </label>
+              <textarea
+                value={solutionCode}
+                onChange={(e) => onSolutionCode(e.target.value)}
+                placeholder="Paste your solution here..."
+                rows={8}
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-ink/50 border border-line/30',
+                  'font-mono text-sm text-paper placeholder:text-slate/40',
+                  'focus:outline-none focus-visible:border-signal focus-visible:ring-1 focus-visible:ring-signal',
+                  'transition-colors resize-y',
+                )}
+              />
+            </div>
+
+            {/* Complexity row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-mono text-slate uppercase tracking-widest">
+                  Time
+                </label>
+                <input
+                  type="text"
+                  value={timeComplexity}
+                  onChange={(e) => onTimeComplexity(e.target.value)}
+                  placeholder="O(n)"
+                  className={cn(
+                    'w-full px-3 py-2.5 rounded-lg',
+                    'bg-ink/50 border border-line/30',
+                    'font-mono text-sm text-paper placeholder:text-slate/40',
+                    'focus:outline-none focus-visible:border-signal focus-visible:ring-1 focus-visible:ring-signal',
+                    'transition-colors',
+                  )}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-mono text-slate uppercase tracking-widest">
+                  Space
+                </label>
+                <input
+                  type="text"
+                  value={spaceComplexity}
+                  onChange={(e) => onSpaceComplexity(e.target.value)}
+                  placeholder="O(1)"
+                  className={cn(
+                    'w-full px-3 py-2.5 rounded-lg',
+                    'bg-ink/50 border border-line/30',
+                    'font-mono text-sm text-paper placeholder:text-slate/40',
+                    'focus:outline-none focus-visible:border-signal focus-visible:ring-1 focus-visible:ring-signal',
+                    'transition-colors',
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Solution notes (markdown) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-mono text-slate uppercase tracking-widest">
+                Notes <span className="text-slate/40 normal-case">(markdown)</span>
+              </label>
+              <textarea
+                value={solutionNotes}
+                onChange={(e) => onSolutionNotes(e.target.value)}
+                placeholder={"## Approach\n\nDescribe your approach...\n\n## Edge cases\n\n- ..."}
+                rows={5}
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-ink/50 border border-line/30',
+                  'font-sans text-sm text-paper placeholder:text-slate/40',
+                  'focus:outline-none focus-visible:border-signal focus-visible:ring-1 focus-visible:ring-signal',
+                  'transition-colors resize-y',
+                )}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Code review AI prompt — shown after solving, before saving notes */}

@@ -11,6 +11,7 @@
  * add new problem, remove with confirm.
  */
 import { useState, useMemo } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { useStore } from '../../store'
 import { PATTERN_LABELS, PATTERN_ORDER } from '../../constants'
 import { cn } from '../../utils/cn'
@@ -18,7 +19,7 @@ import { TemperatureBar } from '../TemperatureBar'
 import type { MasteryCounts } from '../TemperatureBar'
 import { MasteryDots } from '../MasteryDots'
 import { ConfirmDialog } from '../ConfirmDialog'
-import type { Pattern, Problem, ProblemStatus } from '../../types'
+import type { Pattern, Problem, ProblemStatus, Solution } from '../../types'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -201,6 +202,7 @@ function AddProblemForm({ defaultPattern, defaultOrder, onAdd, onCancel }: AddPr
       nextReview: null,
       attempts: [],
       notes: { trigger: '', insight: '', gap: '' },
+      solution: null,
     })
     setTitle('')
     setUrl('')
@@ -360,6 +362,192 @@ function NotesEditor({ problemId, notes }: NotesEditorProps) {
   )
 }
 
+// ─── Solution panel ──────────────────────────────────────────────────────────
+
+interface SolutionPanelProps {
+  problemId: string
+  solution: Solution | null
+}
+
+function SolutionPanel({ problemId, solution }: SolutionPanelProps) {
+  const updateSolution = useStore((s) => s.updateSolution)
+  const [editing, setEditing] = useState(false)
+  const [code, setCode] = useState(solution?.code ?? '')
+  const [timeCx, setTimeCx] = useState(solution?.timeComplexity ?? '')
+  const [spaceCx, setSpaceCx] = useState(solution?.spaceComplexity ?? '')
+  const [notes, setNotes] = useState(solution?.notes ?? '')
+
+  const hasSolution = solution && (solution.code || solution.timeComplexity || solution.spaceComplexity || solution.notes)
+
+  const handleSave = () => {
+    updateSolution(problemId, {
+      code,
+      timeComplexity: timeCx.trim(),
+      spaceComplexity: spaceCx.trim(),
+      notes,
+    })
+    setEditing(false)
+  }
+
+  const inputClass = cn(
+    'w-full bg-ink border border-line/30 rounded px-3 py-1.5',
+    'font-mono text-sm text-paper',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+    'placeholder:text-slate/30',
+  )
+
+  if (editing) {
+    return (
+      <div className="flex flex-col gap-3 mt-3 p-3 border border-signal/20 rounded-lg bg-signal/5">
+        <p className="font-mono text-xs text-signal font-medium">My solution</p>
+
+        <div className="flex flex-col gap-1">
+          <label className="font-mono text-xs text-slate/60">Code</label>
+          <textarea
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="Paste your solution..."
+            rows={8}
+            className={cn(inputClass, 'resize-y font-mono')}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="font-mono text-xs text-slate/60">Time</label>
+            <input
+              type="text"
+              value={timeCx}
+              onChange={(e) => setTimeCx(e.target.value)}
+              placeholder="O(n)"
+              className={inputClass}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-mono text-xs text-slate/60">Space</label>
+            <input
+              type="text"
+              value={spaceCx}
+              onChange={(e) => setSpaceCx(e.target.value)}
+              placeholder="O(1)"
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="font-mono text-xs text-slate/60">Notes (markdown)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={"## Approach\n\nDescribe your approach..."}
+            rows={4}
+            className={cn(inputClass, 'resize-y font-sans')}
+          />
+        </div>
+
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className={cn(
+              'px-3 py-1.5 rounded text-xs font-sans',
+              'border border-line/30 text-slate',
+              'hover:text-paper hover:border-line/60 transition-colors',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+            )}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className={cn(
+              'px-3 py-1.5 rounded text-xs font-sans font-medium',
+              'bg-signal text-paper border border-signal/50',
+              'hover:bg-signal/80 transition-colors',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+            )}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!hasSolution) {
+    return (
+      <div className="mt-2 ml-16">
+        <button
+          onClick={() => setEditing(true)}
+          className="text-xs font-sans text-slate/30 hover:text-signal transition-colors italic focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded"
+        >
+          + add solution
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2 mt-3 p-3 border border-line/15 rounded-lg bg-ink/30">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-xs text-slate/60">My solution</span>
+        <button
+          onClick={() => setEditing(true)}
+          className={cn(
+            'font-mono text-xs text-slate/40 hover:text-slate transition-colors',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1',
+          )}
+        >
+          edit
+        </button>
+      </div>
+
+      {/* Complexity badges */}
+      {(solution!.timeComplexity || solution!.spaceComplexity) && (
+        <div className="flex gap-2">
+          {solution!.timeComplexity && (
+            <span className="font-mono text-xs text-mid bg-mid/10 border border-mid/20 px-2 py-0.5 rounded">
+              Time: {solution!.timeComplexity}
+            </span>
+          )}
+          {solution!.spaceComplexity && (
+            <span className="font-mono text-xs text-cool bg-cool/10 border border-cool/20 px-2 py-0.5 rounded">
+              Space: {solution!.spaceComplexity}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Code block */}
+      {solution!.code && (
+        <pre className={cn(
+          'mt-1 p-3 rounded-md overflow-x-auto',
+          'bg-ink border border-line/20',
+          'font-mono text-xs text-paper/80 leading-relaxed',
+        )}>
+          <code>{solution!.code}</code>
+        </pre>
+      )}
+
+      {/* Markdown notes */}
+      {solution!.notes && (
+        <div className={cn(
+          'mt-1 prose prose-invert prose-sm max-w-none',
+          'prose-headings:font-mono prose-headings:text-paper prose-headings:text-sm prose-headings:font-semibold',
+          'prose-p:text-paper/80 prose-p:text-xs prose-p:leading-relaxed',
+          'prose-li:text-paper/80 prose-li:text-xs',
+          'prose-code:text-signal prose-code:text-xs',
+          'prose-strong:text-paper',
+        )}>
+          <ReactMarkdown>{solution!.notes}</ReactMarkdown>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Problem row ──────────────────────────────────────────────────────────────
 
 interface ProblemRowProps {
@@ -464,7 +652,10 @@ function ProblemRow({ problem, onStartSession, onEditProblem, onDeleteProblem }:
 
         {/* Notes panel */}
         {editingNotes && (
-          <NotesEditor problemId={problem.id} notes={problem.notes} />
+          <>
+            <NotesEditor problemId={problem.id} notes={problem.notes} />
+            <SolutionPanel problemId={problem.id} solution={problem.solution} />
+          </>
         )}
       </div>
 
