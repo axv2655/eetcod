@@ -36,6 +36,7 @@ function makeProblem(overrides: Partial<Problem> = {}): Problem {
     nextReview: null,
     attempts: [],
     notes: { trigger: '', insight: '', gap: '' },
+    solution: null,
     ...overrides,
   }
 }
