@@ -92,7 +92,7 @@ export async function pushToRemote(userId: string): Promise<void> {
         {
           user_id: userId,
           state: snapshot,
-          updated_at: new Date().toISOString(),
+          updated_at: snapshot.updatedAt,
           version: 1,
         },
         { onConflict: 'user_id' },
@@ -134,7 +134,9 @@ export async function pullOnLoad(userId: string): Promise<void> {
     }
 
     const localUpdatedAt = store.updatedAt
-    const remoteUpdatedAt = data.updated_at
+    // Compare using the updatedAt inside the snapshot (set by store actions),
+    // NOT the row's updated_at (set at push time) — those can drift.
+    const remoteUpdatedAt = data.state?.updatedAt ?? data.updated_at
 
     if (remoteUpdatedAt > localUpdatedAt) {
       // Remote is newer — hydrate store
@@ -196,7 +198,9 @@ export async function initSync(userId: string): Promise<void> {
     await pullOnLoad(userId)
   }
 
-  // Subscribe to store changes — debounce push on updatedAt change
+  // Subscribe to store changes — debounce push on updatedAt change.
+  // Seed lastUpdatedAt AFTER pull-on-load so the hydration itself
+  // doesn't trigger an immediate push of the just-received remote data.
   let lastUpdatedAt = useStore.getState().updatedAt
   _unsubscribe = useStore.subscribe((state) => {
     if (state.updatedAt !== lastUpdatedAt) {
@@ -204,6 +208,9 @@ export async function initSync(userId: string): Promise<void> {
       schedulePush(userId)
     }
   })
+  // Re-anchor after subscription setup so any updatedAt change from
+  // hydrateStore above doesn't queue a redundant push.
+  lastUpdatedAt = useStore.getState().updatedAt
 
   // Listen for connectivity restoration
   _onlineListener = () => {

@@ -319,7 +319,9 @@ export const useStore = create<StoreState>()(
       replaceAll: (state) =>
         set({
           ...state,
-          updatedAt: now(),
+          // Preserve the incoming updatedAt so sync comparisons stay accurate.
+          // Using now() here would make stale remote data look newest and win forever.
+          updatedAt: state.updatedAt ?? now(),
         }),
     }),
     {
