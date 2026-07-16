@@ -339,12 +339,28 @@ export const useStore = create<StoreState>()(
 
       // Seed on first load if the store is empty
       onRehydrateStorage: () => (state) => {
-        if (state && state.problems.length === 0) {
+        if (!state) return
+        if (state.problems.length === 0) {
           const seed = freshSeed()
           state.problems = seed.problems
           state.cards = seed.cards
           state.snippets = seed.snippets
           state.updatedAt = new Date().toISOString()
+        } else {
+          // Migrate any problems still pointing at leetcode.com or old neetcode slugs
+          // to the correct neetcode.io URLs. Safe to run on every load — no-op if already correct.
+          const seed = freshSeed()
+          const seedUrls = new Map(seed.problems.map((p) => [p.id, p.url]))
+          let changed = false
+          state.problems = state.problems.map((p) => {
+            const correctUrl = seedUrls.get(p.id)
+            if (correctUrl && p.url !== correctUrl) {
+              changed = true
+              return { ...p, url: correctUrl }
+            }
+            return p
+          })
+          if (changed) state.updatedAt = new Date().toISOString()
         }
       },
     },

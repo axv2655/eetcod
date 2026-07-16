@@ -5,11 +5,13 @@ function makeProblem(
   title: string,
   pattern: Pattern,
   order: number,
+  /** NeetCode slug when it differs from the LeetCode id */
+  neetSlug?: string,
 ): Problem {
   return {
     id,
     title,
-    url: `https://leetcode.com/problems/${id}/`,
+    url: `https://neetcode.io/problems/${neetSlug ?? id}/question?list=neetcode150`,
     pattern,
     order,
     status: 'not_started',
@@ -31,26 +33,26 @@ export function seedProblems(): Problem[] {
     makeProblem('top-k-frequent-elements', 'Top K Frequent Elements', 'arrays_hashing', 4),
     makeProblem('product-of-array-except-self', 'Product of Array Except Self', 'arrays_hashing', 5),
     makeProblem('valid-sudoku', 'Valid Sudoku', 'arrays_hashing', 6),
-    makeProblem('encode-and-decode-strings', 'Encode and Decode Strings', 'arrays_hashing', 7),
+    makeProblem('encode-and-decode-strings', 'Encode and Decode Strings', 'arrays_hashing', 7, 'string-encode-and-decode'),
     makeProblem('longest-consecutive-sequence', 'Longest Consecutive Sequence', 'arrays_hashing', 8),
 
     // ── Two Pointers (5) ─────────────────────────────────────────────────
     makeProblem('valid-palindrome', 'Valid Palindrome', 'two_pointers', 0),
-    makeProblem('two-sum-ii-input-array-is-sorted', 'Two Sum II - Input Array Is Sorted', 'two_pointers', 1),
-    makeProblem('3sum', '3Sum', 'two_pointers', 2),
+    makeProblem('two-sum-ii-input-array-is-sorted', 'Two Sum II - Input Array Is Sorted', 'two_pointers', 1, 'two-integer-sum-ii'),
+    makeProblem('3sum', '3Sum', 'two_pointers', 2, 'three-integer-sum'),
     makeProblem('container-with-most-water', 'Container With Most Water', 'two_pointers', 3),
     makeProblem('trapping-rain-water', 'Trapping Rain Water', 'two_pointers', 4),
 
     // ── Sliding Window (6) ───────────────────────────────────────────────
-    makeProblem('best-time-to-buy-and-sell-stock', 'Best Time to Buy and Sell Stock', 'sliding_window', 0),
+    makeProblem('best-time-to-buy-and-sell-stock', 'Best Time to Buy and Sell Stock', 'sliding_window', 0, 'buy-and-sell-crypto'),
     makeProblem('longest-substring-without-repeating-characters', 'Longest Substring Without Repeating Characters', 'sliding_window', 1),
     makeProblem('longest-repeating-character-replacement', 'Longest Repeating Character Replacement', 'sliding_window', 2),
     makeProblem('permutation-in-string', 'Permutation in String', 'sliding_window', 3),
-    makeProblem('minimum-window-substring', 'Minimum Window Substring', 'sliding_window', 4),
+    makeProblem('minimum-window-substring', 'Minimum Window Substring', 'sliding_window', 4, 'minimum-window-with-characters'),
     makeProblem('sliding-window-maximum', 'Sliding Window Maximum', 'sliding_window', 5),
 
     // ── Stack (7) ────────────────────────────────────────────────────────
-    makeProblem('valid-parentheses', 'Valid Parentheses', 'stack', 0),
+    makeProblem('valid-parentheses', 'Valid Parentheses', 'stack', 0, 'validate-parentheses'),
     makeProblem('min-stack', 'Min Stack', 'stack', 1),
     makeProblem('evaluate-reverse-polish-notation', 'Evaluate Reverse Polish Notation', 'stack', 2),
     makeProblem('generate-parentheses', 'Generate Parentheses', 'stack', 3),
@@ -72,12 +74,12 @@ export function seedProblems(): Problem[] {
     makeProblem('merge-two-sorted-lists', 'Merge Two Sorted Lists', 'linked_list', 1),
     makeProblem('reorder-list', 'Reorder List', 'linked_list', 2),
     makeProblem('remove-nth-node-from-end-of-list', 'Remove Nth Node From End of List', 'linked_list', 3),
-    makeProblem('copy-list-with-random-pointer', 'Copy List with Random Pointer', 'linked_list', 4),
+    makeProblem('copy-list-with-random-pointer', 'Copy List with Random Pointer', 'linked_list', 4, 'copy-linked-list-with-random-pointer'),
     makeProblem('add-two-numbers', 'Add Two Numbers', 'linked_list', 5),
     makeProblem('linked-list-cycle', 'Linked List Cycle', 'linked_list', 6),
-    makeProblem('find-the-duplicate-number', 'Find the Duplicate Number', 'linked_list', 7),
+    makeProblem('find-the-duplicate-number', 'Find the Duplicate Number', 'linked_list', 7, 'find-duplicate-integer'),
     makeProblem('lru-cache', 'LRU Cache', 'linked_list', 8),
-    makeProblem('merge-k-sorted-lists', 'Merge K Sorted Lists', 'linked_list', 9),
+    makeProblem('merge-k-sorted-lists', 'Merge K Sorted Lists', 'linked_list', 9, 'merge-k-sorted-linked-lists'),
     makeProblem('reverse-nodes-in-k-group', 'Reverse Nodes in k-Group', 'linked_list', 10),
 
     // ── Trees (15) ───────────────────────────────────────────────────────
@@ -87,23 +89,23 @@ export function seedProblems(): Problem[] {
     makeProblem('balanced-binary-tree', 'Balanced Binary Tree', 'trees', 3),
     makeProblem('same-tree', 'Same Tree', 'trees', 4),
     makeProblem('subtree-of-another-tree', 'Subtree of Another Tree', 'trees', 5),
-    makeProblem('lowest-common-ancestor-of-a-binary-search-tree', 'Lowest Common Ancestor of a BST', 'trees', 6),
+    makeProblem('lowest-common-ancestor-of-a-binary-search-tree', 'Lowest Common Ancestor of a BST', 'trees', 6, 'lowest-common-ancestor-in-binary-search-tree'),
     makeProblem('binary-tree-level-order-traversal', 'Binary Tree Level Order Traversal', 'trees', 7),
     makeProblem('binary-tree-right-side-view', 'Binary Tree Right Side View', 'trees', 8),
     makeProblem('count-good-nodes-in-binary-tree', 'Count Good Nodes in Binary Tree', 'trees', 9),
     makeProblem('validate-binary-search-tree', 'Validate Binary Search Tree', 'trees', 10),
     makeProblem('kth-smallest-element-in-a-bst', 'Kth Smallest Element in a BST', 'trees', 11),
-    makeProblem('construct-binary-tree-from-preorder-and-inorder-traversal', 'Construct Binary Tree from Preorder and Inorder Traversal', 'trees', 12),
+    makeProblem('construct-binary-tree-from-preorder-and-inorder-traversal', 'Construct Binary Tree from Preorder and Inorder Traversal', 'trees', 12, 'binary-tree-from-preorder-and-inorder-traversal'),
     makeProblem('binary-tree-maximum-path-sum', 'Binary Tree Maximum Path Sum', 'trees', 13),
     makeProblem('serialize-and-deserialize-binary-tree', 'Serialize and Deserialize Binary Tree', 'trees', 14),
 
     // ── Tries (3) ────────────────────────────────────────────────────────
-    makeProblem('implement-trie-prefix-tree', 'Implement Trie (Prefix Tree)', 'tries', 0),
-    makeProblem('design-add-and-search-words-data-structure', 'Design Add and Search Words Data Structure', 'tries', 1),
-    makeProblem('word-search-ii', 'Word Search II', 'tries', 2),
+    makeProblem('implement-trie-prefix-tree', 'Implement Trie (Prefix Tree)', 'tries', 0, 'implement-prefix-tree'),
+    makeProblem('design-add-and-search-words-data-structure', 'Design Add and Search Words Data Structure', 'tries', 1, 'design-word-search-data-structure'),
+    makeProblem('word-search-ii', 'Word Search II', 'tries', 2, 'search-for-word-ii'),
 
     // ── Heap / Priority Queue (7) ────────────────────────────────────────
-    makeProblem('kth-largest-element-in-a-stream', 'Kth Largest Element in a Stream', 'heap_priority_queue', 0),
+    makeProblem('kth-largest-element-in-a-stream', 'Kth Largest Element in a Stream', 'heap_priority_queue', 0, 'kth-largest-integer-in-a-stream'),
     makeProblem('last-stone-weight', 'Last Stone Weight', 'heap_priority_queue', 1),
     makeProblem('k-closest-points-to-origin', 'K Closest Points to Origin', 'heap_priority_queue', 2),
     makeProblem('kth-largest-element-in-an-array', 'Kth Largest Element in an Array', 'heap_priority_queue', 3),
@@ -129,12 +131,12 @@ export function seedProblems(): Problem[] {
     makeProblem('pacific-atlantic-water-flow', 'Pacific Atlantic Water Flow', 'graphs', 3),
     makeProblem('surrounded-regions', 'Surrounded Regions', 'graphs', 4),
     makeProblem('rotting-oranges', 'Rotting Oranges', 'graphs', 5),
-    makeProblem('walls-and-gates', 'Walls and Gates', 'graphs', 6),
+    makeProblem('walls-and-gates', 'Walls and Gates', 'graphs', 6, 'islands-and-treasure'),
     makeProblem('course-schedule', 'Course Schedule', 'graphs', 7),
     makeProblem('course-schedule-ii', 'Course Schedule II', 'graphs', 8),
     makeProblem('redundant-connection', 'Redundant Connection', 'graphs', 9),
-    makeProblem('number-of-connected-components-in-an-undirected-graph', 'Number of Connected Components in an Undirected Graph', 'graphs', 10),
-    makeProblem('graph-valid-tree', 'Graph Valid Tree', 'graphs', 11),
+    makeProblem('number-of-connected-components-in-an-undirected-graph', 'Number of Connected Components in an Undirected Graph', 'graphs', 10, 'count-connected-components'),
+    makeProblem('graph-valid-tree', 'Graph Valid Tree', 'graphs', 11, 'valid-tree'),
     makeProblem('word-ladder', 'Word Ladder', 'graphs', 12),
 
     // ── Advanced Graphs (6) ──────────────────────────────────────────────
@@ -162,7 +164,7 @@ export function seedProblems(): Problem[] {
     // ── 2-D DP (11) ──────────────────────────────────────────────────────
     makeProblem('unique-paths', 'Unique Paths', 'dp_2d', 0),
     makeProblem('longest-common-subsequence', 'Longest Common Subsequence', 'dp_2d', 1),
-    makeProblem('best-time-to-buy-and-sell-stock-with-cooldown', 'Best Time to Buy and Sell Stock with Cooldown', 'dp_2d', 2),
+    makeProblem('best-time-to-buy-and-sell-stock-with-cooldown', 'Best Time to Buy and Sell Stock with Cooldown', 'dp_2d', 2, 'buy-and-sell-crypto-with-cooldown'),
     makeProblem('coin-change-ii', 'Coin Change II', 'dp_2d', 3),
     makeProblem('target-sum', 'Target Sum', 'dp_2d', 4),
     makeProblem('interleaving-string', 'Interleaving String', 'dp_2d', 5),
@@ -198,7 +200,7 @@ export function seedProblems(): Problem[] {
     makeProblem('plus-one', 'Plus One', 'math_geometry', 4),
     makeProblem('pow-x-n', 'Pow(x, n)', 'math_geometry', 5),
     makeProblem('multiply-strings', 'Multiply Strings', 'math_geometry', 6),
-    makeProblem('detect-squares', 'Detect Squares', 'math_geometry', 7),
+    makeProblem('detect-squares', 'Detect Squares', 'math_geometry', 7, 'count-squares'),
 
     // ── Bit Manipulation (7) ─────────────────────────────────────────────
     makeProblem('single-number', 'Single Number', 'bit_manipulation', 0),
