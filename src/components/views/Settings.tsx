@@ -289,6 +289,26 @@ export function Settings() {
               aria-label="Study deadline"
             />
           </FieldRow>
+
+          <FieldRow label="Flashcards in Today" hint="Show concept cards in the daily queue">
+            <button
+              onClick={() => updateSettings({ showFlashcards: !settings.showFlashcards })}
+              role="switch"
+              aria-checked={settings.showFlashcards !== false}
+              className={cn(
+                'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+                settings.showFlashcards !== false ? 'bg-signal' : 'bg-line/30',
+              )}
+            >
+              <span
+                className={cn(
+                  'pointer-events-none inline-block h-5 w-5 rounded-full bg-paper shadow transition-transform',
+                  settings.showFlashcards !== false ? 'translate-x-5' : 'translate-x-0',
+                )}
+              />
+            </button>
+          </FieldRow>
         </Section>
 
         {/* ── Account (only shown when Supabase is configured) ── */}

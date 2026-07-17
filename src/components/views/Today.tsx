@@ -15,7 +15,7 @@ import type { QueueItem } from '../../scheduling'
 import { PATTERN_LABELS, EMPTY_TODAY_TAGLINE, PATTERN_ORDER } from '../../constants'
 import { cn } from '../../utils/cn'
 import { MasteryDots } from '../MasteryDots'
-import type { ConceptCard } from '../../types'
+import type { ConceptCard, Problem } from '../../types'
 import type { TransferTest } from '../../store'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -182,10 +182,12 @@ function TransferTestBanner({ transferTest, problemTitle, onAccept, onDecline }:
 interface EmptyStateProps {
   paceStatus: 'on_track' | 'ahead' | 'behind'
   dailyNewTarget: number
+  hasMoreProblems: boolean
+  onAddOne: () => void
   onPullForward: () => void
 }
 
-function EmptyState({ paceStatus, onPullForward }: EmptyStateProps) {
+function EmptyState({ paceStatus, hasMoreProblems, onAddOne, onPullForward }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-8 h-full text-center px-6">
       <div className="flex flex-col items-center gap-3">
@@ -207,17 +209,34 @@ function EmptyState({ paceStatus, onPullForward }: EmptyStateProps) {
         <p className="font-mono text-xs text-warm">a bit behind — consider pulling more</p>
       )}
 
-      {/* Pull forward option */}
-      <button
-        onClick={onPullForward}
-        className={cn(
-          'text-sm font-sans text-slate/60',
-          'hover:text-slate underline-offset-2 hover:underline transition-colors',
-          'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded',
+      <div className="flex flex-col items-center gap-3">
+        {/* Give me another */}
+        {hasMoreProblems && (
+          <button
+            onClick={onAddOne}
+            className={cn(
+              'px-5 py-2.5 rounded-lg text-sm font-sans font-medium',
+              'bg-signal text-paper border border-signal/50',
+              'hover:bg-signal/80 transition-colors',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+            )}
+          >
+            Give me another problem
+          </button>
         )}
-      >
-        Pull tomorrow's problems forward
-      </button>
+
+        {/* Pull forward option */}
+        <button
+          onClick={onPullForward}
+          className={cn(
+            'text-sm font-sans text-slate/60',
+            'hover:text-slate underline-offset-2 hover:underline transition-colors',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded',
+          )}
+        >
+          Pull tomorrow's problems forward
+        </button>
+      </div>
     </div>
   )
 }
@@ -268,10 +287,13 @@ export function Today() {
   // Pull-forward toggle: show extra new problems if user wants to get ahead
   const [pullForward, setPullForward] = useState(false)
 
-  // Extra new problems pulled forward (tomorrow's allocation)
+  // Extra single problems added via "give me another"
+  const [extraCount, setExtraCount] = useState(0)
+
+  // Extra new problems pulled forward (tomorrow's allocation or one-at-a-time)
   const extraQueue = useMemo(() => {
-    if (!pullForward) return []
-    const { dailyNewTarget } = pacing
+    const count = pullForward ? pacing.dailyNewTarget : extraCount
+    if (count === 0) return []
     const alreadyQueued = new Set(
       queue
         .filter((item) => item.type === 'new')
@@ -286,9 +308,9 @@ export function Today() {
         if (pa !== pb) return pa - pb
         return a.order - b.order
       })
-      .slice(0, dailyNewTarget)
+      .slice(0, count)
       .map((p) => ({ type: 'new' as const, problem: p }))
-  }, [pullForward, problems, queue, pacing])
+  }, [pullForward, extraCount, problems, queue, pacing])
 
   const fullQueue: QueueItem[] = [...queue, ...extraQueue].filter((item) => {
     const id = item.type === 'concept' ? item.card.id : item.problem.id
@@ -330,6 +352,10 @@ export function Today() {
     setTransferTest(null)
   }
 
+  // Are there more not_started problems to pull in?
+  const allQueuedIds = new Set(fullQueue.map((item) => item.type === 'concept' ? item.card.id : item.problem.id))
+  const hasMoreProblems = problems.some((p) => p.status === 'not_started' && !allQueuedIds.has(p.id))
+
   if (remaining === 0) {
     return (
       <div className="flex flex-col h-full gap-6">
@@ -349,6 +375,8 @@ export function Today() {
         <EmptyState
           paceStatus={pacing.paceStatus}
           dailyNewTarget={pacing.dailyNewTarget}
+          hasMoreProblems={hasMoreProblems}
+          onAddOne={() => setExtraCount((c) => c + 1)}
           onPullForward={() => setPullForward(true)}
         />
       </div>
@@ -425,6 +453,9 @@ interface QueueCardProps {
 
 function QueueCard({ item, onStart, onConceptDone, onSkip }: QueueCardProps) {
   const [showConcept, setShowConcept] = useState(false)
+  const [editingUrl, setEditingUrl] = useState(false)
+  const updateProblem = useStore((s) => s.updateProblem)
+  const [urlDraft, setUrlDraft] = useState('')
 
   if (item.type === 'concept') {
     if (!showConcept) {
@@ -487,6 +518,13 @@ function QueueCard({ item, onStart, onConceptDone, onSkip }: QueueCardProps) {
   const problem = item.problem
   const itemType = item.type
 
+  const handleSaveUrl = () => {
+    if (urlDraft.trim()) {
+      updateProblem(problem.id, { url: urlDraft.trim() })
+    }
+    setEditingUrl(false)
+  }
+
   return (
     <div className="flex flex-col gap-6 w-full max-w-xl">
       {/* Type badge + pattern */}
@@ -513,6 +551,55 @@ function QueueCard({ item, onStart, onConceptDone, onSkip }: QueueCardProps) {
             <span className="text-xs font-mono text-slate capitalize">
               {problem.status.replace('_', ' ')}
             </span>
+          </div>
+        )}
+
+        {/* Problem URL with edit option */}
+        {!editingUrl ? (
+          <div className="flex items-center gap-2">
+            <a
+              href={problem.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono text-signal/70 hover:text-signal hover:underline truncate"
+            >
+              {problem.url.replace(/^https?:\/\//, '').replace(/\/question.*$/, '')}
+            </a>
+            <button
+              onClick={() => { setUrlDraft(problem.url); setEditingUrl(true) }}
+              className="text-xs font-mono text-slate/40 hover:text-slate transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1"
+            >
+              edit
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={urlDraft}
+              onChange={(e) => setUrlDraft(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveUrl(); if (e.key === 'Escape') setEditingUrl(false) }}
+              className={cn(
+                'flex-1 px-2 py-1 rounded text-xs font-mono',
+                'bg-ink border border-line/30 text-paper',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+                'placeholder:text-slate/30',
+              )}
+              placeholder="https://neetcode.io/problems/..."
+            />
+            <button
+              onClick={handleSaveUrl}
+              className="text-xs font-mono text-signal hover:underline shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1"
+            >
+              save
+            </button>
+            <button
+              onClick={() => setEditingUrl(false)}
+              className="text-xs font-mono text-slate/40 hover:text-slate shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded px-1"
+            >
+              cancel
+            </button>
           </div>
         )}
       </div>

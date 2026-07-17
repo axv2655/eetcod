@@ -381,7 +381,7 @@ function AttemptStep({ problem, timerSec, elapsedRef, timerDone, onTimerComplete
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded',
           )}
         >
-          Open on LeetCode ↗
+          Open on NeetCode ↗
         </a>
       </div>
 

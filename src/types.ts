@@ -70,6 +70,7 @@ export interface Settings {
   studyDaysPerWeek: number;  // default 6, used for pacing math
   language: string;          // default 'Python'; single language for the summer
   deadline: string;          // ISO, default 2026-08-21
+  showFlashcards: boolean;   // whether concept cards appear in the Today queue
 }
 
 // View enum for screen switching (no router — per spec §2)

@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   studyDaysPerWeek: 6,
   language: 'Python',
   deadline: '2026-08-21',
+  showFlashcards: true,
 } as const;
 
 // AI hint prompt templates — spec §6

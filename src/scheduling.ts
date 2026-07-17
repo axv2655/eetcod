@@ -229,22 +229,25 @@ export function buildTodayQueue(
     .filter((p) => p.status !== 'not_started' && isDue(p.nextReview, today))
     .map((p) => ({ type: 'review' as const, problem: p }))
 
-  // 2. Due concept cards
-  // Patterns that have been started (at least one problem not not_started)
-  const startedPatterns = new Set(
-    problems
-      .filter((p) => p.status !== 'not_started')
-      .map((p) => p.pattern),
-  )
+  // 2. Due concept cards (skipped if showFlashcards is off)
+  let dueCards: QueueItem[] = []
+  if (settings.showFlashcards !== false) {
+    // Patterns that have been started (at least one problem not not_started)
+    const startedPatterns = new Set(
+      problems
+        .filter((p) => p.status !== 'not_started')
+        .map((p) => p.pattern),
+    )
 
-  const dueCards: QueueItem[] = cards
-    .filter((c) => {
-      if (isDue(c.nextReview, today)) return true
-      // New cards (nextReview === null) are due if their pattern is started
-      if (c.nextReview === null && startedPatterns.has(c.pattern)) return true
-      return false
-    })
-    .map((c) => ({ type: 'concept' as const, card: c }))
+    dueCards = cards
+      .filter((c) => {
+        if (isDue(c.nextReview, today)) return true
+        // New cards (nextReview === null) are due if their pattern is started
+        if (c.nextReview === null && startedPatterns.has(c.pattern)) return true
+        return false
+      })
+      .map((c) => ({ type: 'concept' as const, card: c }))
+  }
 
   // 3. New problems in strict NeetCode order
   const { dailyNewTarget } = computeDailyNewTarget(problems, settings, today)
