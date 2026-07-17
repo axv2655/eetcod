@@ -61,6 +61,7 @@ const DEFAULT_SETTINGS: Settings = {
   studyDaysPerWeek: 6,
   language: 'Python',
   deadline: '2026-08-21',
+  showFlashcards: true,
 }
 
 // ─── scheduleAfterAttempt ─────────────────────────────────────────────────────

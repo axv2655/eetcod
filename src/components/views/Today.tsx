@@ -15,7 +15,7 @@ import type { QueueItem } from '../../scheduling'
 import { PATTERN_LABELS, EMPTY_TODAY_TAGLINE, PATTERN_ORDER } from '../../constants'
 import { cn } from '../../utils/cn'
 import { MasteryDots } from '../MasteryDots'
-import type { ConceptCard, Problem } from '../../types'
+import type { ConceptCard } from '../../types'
 import type { TransferTest } from '../../store'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
