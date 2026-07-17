@@ -129,7 +129,7 @@ export const useStore = create<StoreState>()(
       cards: [],
       snippets: [],
       settings: { ...DEFAULT_SETTINGS },
-      updatedAt: now(),
+      updatedAt: '1970-01-01T00:00:00.000Z',
 
       // ── Initial transient state ─────────────────────────────────────────
       view: 'today' as View,
@@ -313,7 +313,9 @@ export const useStore = create<StoreState>()(
         set({
           ...freshSeed(),
           settings: { ...DEFAULT_SETTINGS },
-          updatedAt: now(),
+          // Epoch so seed data never wins a sync comparison against
+          // real progress on remote — cloud backup stays safe.
+          updatedAt: '1970-01-01T00:00:00.000Z',
         }),
 
       replaceAll: (state) =>
@@ -345,22 +347,23 @@ export const useStore = create<StoreState>()(
           state.problems = seed.problems
           state.cards = seed.cards
           state.snippets = seed.snippets
-          state.updatedAt = new Date().toISOString()
+          // Use epoch so seed data never wins a sync comparison
+          // against real progress on remote.
+          state.updatedAt = '1970-01-01T00:00:00.000Z'
         } else {
           // Migrate any problems still pointing at leetcode.com or old neetcode slugs
           // to the correct neetcode.io URLs. Safe to run on every load — no-op if already correct.
           const seed = freshSeed()
           const seedUrls = new Map(seed.problems.map((p) => [p.id, p.url]))
-          let changed = false
           state.problems = state.problems.map((p) => {
             const correctUrl = seedUrls.get(p.id)
             if (correctUrl && p.url !== correctUrl) {
-              changed = true
               return { ...p, url: correctUrl }
             }
             return p
           })
-          if (changed) state.updatedAt = new Date().toISOString()
+          // Don't bump updatedAt — URL fixes are cosmetic and must not
+          // make local data win a sync comparison over real remote progress.
         }
       },
     },

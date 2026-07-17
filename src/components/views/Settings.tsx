@@ -166,6 +166,10 @@ export function Settings() {
   const handleResetFirstConfirm = () => setResetStep(2)
 
   const handleResetSecondConfirm = () => {
+    // Tear down sync first so the epoch-timestamped seed data doesn't
+    // get pushed to remote, destroying the cloud backup.
+    // Sync re-establishes on next page load.
+    if (user) teardownSync()
     resetAll()
     setResetStep(0)
   }
@@ -183,7 +187,8 @@ export function Settings() {
   const handleSignOut = async () => {
     if (!supabase) return
     teardownSync()
-    // Clear local cache by resetting to seed, then sign out
+    // Reset to seed with epoch timestamp — remote progress is preserved
+    // because epoch never wins a sync comparison on next sign-in.
     resetAll()
     setUser(null)
     setSyncStatus('idle')
